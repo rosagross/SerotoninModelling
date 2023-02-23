@@ -3,15 +3,11 @@ import os
 from parameter import Parameter
 from simulation_functions import SimulationSession
 
-'''
-
-'''
-
 
 def main():
     # read in arguments
     total_sim = 5 # in sec
-    sigmaN = 0 # 3.5
+    sigmaN = 3.5
     betaE = 6 # 0.7
     t_start=0
     t_end=total_sim*1000 # in milliseconds

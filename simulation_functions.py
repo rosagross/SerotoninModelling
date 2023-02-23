@@ -21,78 +21,8 @@ class SimulationSession():
         
         # let the integration happen!
         self.output_y, self.output_noise = self.integrator_RK4()
-        
+        self.safe_output()
         #print(self.output)
-
-    def derivative_test(self, y, n, par):
-        '''
-        test function with only one formula of the E derivative. 
-        No adaptation and no inhibitory population, no noise.
-        '''
-
-        aux = par.Jee*y + par.thetaE
-        if aux <= par.Edesp:
-            dy = -y/par.tauE
-        else: 
-            dy = (-y + par.Eslope*(aux-par.Edesp))/par.tauE
-
-        return dy
-
-        
-    def integrator_test(self):
-        '''
-        Only integrating the E formula
-        sim_params : list of 3 element; start time, end time, time step
-        '''
-        dt = self.sim_params[2]
-        t_end = self.sim_params[1]
-
-        #noiseDummy = np.exp(-dt/par.tauN)
-        #noiseDummy = 
-        rk4Aux1=dt*0.500000000 #(1/2)
-        rk4Aux2=dt*0.166666666 # (1/6)
-        Tdt = int(1/dt)
-        tsteps = np.arange(dt, t_end, dt)
-
-        # in the RK we have 4 derivatives
-        derivatives = np.zeros((4,))
-
-        y_current = self.initial_cond[0] # keeps track of the currect value for the rate 
-        noise_actual = [] # the noise 
-        # time series
-        y = []
-
-        # time counter for when to save the computed value
-        k = 0 
-
-        # for every time step, we now have to find the solution of the derivative by integrating 
-        for iter, step in enumerate(tsteps):
-
-
-            # calculate the derivatives
-            aux1 = self.derivative_test(y_current, 0, self.par)
-            aux2 = y_current + rk4Aux1 * aux1
-    
-            aux3 = self.derivative_test(aux2, 0, self.par)
-            aux2 = y_current + rk4Aux1 * aux3
-
-            aux4 = self.derivative_test(aux2, 0, self.par)
-            aux2 = y_current + dt * aux4
-
-            aux4 += aux3
-
-            aux3 = self.derivative_test(aux2, 0, self.par)
-
-            y_current = y_current + rk4Aux2 * (aux1+aux3 + 2*aux4)
-
-            k+= 1
-            if k == Tdt:
-                print('step', step, 'current y', y_current, 'aux1', aux1, aux2, aux3, aux4)
-                y.append(y_current)
-                # reset time counter
-                k = 0 
-                
-        return y
 
 
     def derivatives(self, y, n, par):
@@ -177,22 +107,18 @@ class SimulationSession():
             # noise 
             noise_current[0] = noise_current[0]*noiseDummy1+noiseDummy2*np.random.normal()
             noise_current[1] = noise_current[1]*noiseDummy1+noiseDummy2*np.random.normal()
-            noise.append(noise_current)
+            
             
             k+= 1
             if k == Tdt:
-                #print('step', step, 'current y', y_current, 'aux1', aux1) # , aux2, aux3, aux4)
                 y.append(y_current)
-                #if step>=2500:
-                #    break
-                #y_I.append()
-                #y_A.append()
-                # reset time counter
+                noise.append(noise_current)
+                
                 k = 0 
                 
         return np.array(y).T, np.array(noise).T
 
-
+# TODO: write this for comparison!
     def integrator_euler(self):
         '''
         The firing rate is computed analytically by using the Euler method. This
@@ -218,11 +144,11 @@ class SimulationSession():
 
     def safe_output(self):
 
-        y_df = pd.DataFrame(self.output_y, index=False)
-        noise_df = pd.DataFrame(self.output_noise, index=False)
+        y_df = pd.DataFrame(self.output_y)
+        noise_df = pd.DataFrame(self.output_noise)
         file_addon = 'no_fluctuations'
-        y_df.to_csv(self.output_dir+f'y_{file_addon}.csv')
-        noise_df.to_csv(self.output_dir+f'noise_{file_addon}.csv')
+        y_df.to_csv(self.output_dir+f'y_{file_addon}.csv', index=False)
+        noise_df.to_csv(self.output_dir+f'noise_{file_addon}.csv', index=False)
 
 
 

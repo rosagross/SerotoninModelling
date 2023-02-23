@@ -19,7 +19,7 @@ class Parameter():
         self.Eslope = 1
         self.Edesp = 5
         self.Islope = 4
-        self.Idesp = 20 # or 25?
+        self.Idesp = 25 
         self.A = 1
 
         # noise (Ornstein-Uhlenbeck)
