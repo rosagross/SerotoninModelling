@@ -9,47 +9,55 @@ class SimulationSession():
         # a session needs parameters and output functions 
         self.par = par
         self.nrVars = 3 # E, I and A
+        self.nrAreas = 5
         self.sim_params = sim_params
-        self.nrSteps = (sim_params[1]-sim_params[0])/sim_params[2]
-        self.initial_cond = [0,0,0]
-        self.noise_init = [0,0]
-        self.yAct = []
+        self.nrSteps = int((sim_params[1]-sim_params[0])/sim_params[2])
+        self.initial_cond = np.zeros((self.nrVars, self.nrAreas))
+        self.noise_init = np.zeros((2, self.nrAreas))
         self.output_dir = output_dir
+        self.rate = np.zeros((self.nrVars, self.nrSteps, self.nrAreas))
+
+        # the random values for the noise are generated now already
+        # TODO: check if the the noise is correct (with the mu and sigma)
+        self.random_vals = np.random.normal(0,1,(2,self.nrSteps,self.nrAreas))
 
 
     def start_sim(self):
         
         # let the integration happen!
         self.output_y, self.output_noise = self.integrator_RK4()
+        self.output_y = np.moveaxis(self.output_y, 0, -2)
         self.safe_output()
-        #print(self.output)
 
 
     def derivatives(self, y, n, par):
         '''
         Parameter:
-        y : array, 3 time series of the firing rate values of E, I and A. 
-        n : array, 3 time series of noise (Ornstein-Uhlenbeck).
+        y : array, 3 x nrAreas time series of the firing rate values of E, I and A. 
+        n : array, 3 x nrAreas time series of noise (Ornstein-Uhlenbeck).
         par : parameter object
-        returns : dy, 3 element array with the derivatives of E, I and A
+        returns : dy, 3 x nrAreas element array with the derivatives of E, I and A
         '''
 
-        dy = np.zeros((3,))
+        dy = np.zeros((3,self.nrAreas))
 
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
         aux = par.Jee*y[0] - par.Jei*y[1] + par.thetaE-y[2] + n[0]
-        if (aux <= par.Edesp):
-            dy[0] = -y[0]/par.tauE  # why?? 
-        else:
-            dy[0] = (-y[0] + par.Eslope*(aux-par.Edesp))/par.tauE
 
+        for area in np.arange(self.nrAreas):
+            if aux[area] <= par.Edesp:
+                dy[0][area] = -y[0][area]/par.tauE
+            else:
+                dy[0][area] = (-y[0][area] + par.Eslope*(aux[area]-par.Edesp))/par.tauE
+            
         # derivative of I - rate 
         aux = par.Jie*y[0] - par.Jii*y[1] + par.thetaI + n[1]
-        if aux <= par.Idesp:
-            dy[1] = -y[1]/par.tauI
-        else:
-            dy[1] = (-y[1]+par.Islope*(aux-par.Idesp))/par.tauI
+        for area in np.arange(self.nrAreas):
+            if aux[area] <= par.Idesp:
+                dy[1][area] = -y[1][area]/par.tauI
+            else:
+                dy[1][area] = (-y[1][area]+par.Islope*(aux[area]-par.Idesp))/par.tauI
 
         # derivative of A - adaptation rate
         dy[2] = (-y[2]+par.betaE*y[0])/par.tauAdapt
@@ -61,7 +69,6 @@ class SimulationSession():
     def integrator_RK4(self):
         '''
         The firing rate is computed analytically by using the Runge-Kutta method.  
-        
         '''
 
         dt = self.sim_params[2]
@@ -74,9 +81,9 @@ class SimulationSession():
         Tdt = int(1/dt)
         tsteps = np.arange(dt, t_end, dt)
 
-        y_current = np.array(self.initial_cond) # keeps track of the currect value for the rate 
-        noise_current = [0,0]
-        noise = [] # the noise 
+        y_current = self.initial_cond # keeps track of the current value for the rate 
+        noise_current = self.noise_init
+        noise = [] 
         noise.append(noise_current)
         # time series per population/variable
         y = []
@@ -104,9 +111,10 @@ class SimulationSession():
 
             y_current = y_current + rk4Aux2 * (aux1+aux3 + 2*aux4)
 
-            # noise 
-            noise_current[0] = noise_current[0]*noiseDummy1+noiseDummy2*np.random.normal()
-            noise_current[1] = noise_current[1]*noiseDummy1+noiseDummy2*np.random.normal()
+            # noise for every area individually
+            #print('noise', noise_current.shape)
+            noise_current[0] = noise_current[0] *noiseDummy1+noiseDummy2*self.random_vals[0,iter,:]
+            noise_current[1] = noise_current[1] *noiseDummy1+noiseDummy2*self.random_vals[1,iter,:]
             
             
             k+= 1
@@ -116,7 +124,7 @@ class SimulationSession():
                 
                 k = 0 
                 
-        return np.array(y).T, np.array(noise).T
+        return np.array(y), np.array(noise).T
 
 # TODO: write this for comparison!
     def integrator_euler(self):
@@ -144,11 +152,18 @@ class SimulationSession():
 
     def safe_output(self):
 
-        y_df = pd.DataFrame(self.output_y)
-        noise_df = pd.DataFrame(self.output_noise)
-        file_addon = 'no_fluctuations'
-        y_df.to_csv(self.output_dir+f'y_{file_addon}.csv', index=False)
-        noise_df.to_csv(self.output_dir+f'noise_{file_addon}.csv', index=False)
+        file_addon = ''
+        print(self.output_y.shape)
+        f_rate_E = pd.DataFrame(self.output_y[0])
+        f_rate_I = pd.DataFrame(self.output_y[1])
+        f_rate_A = pd.DataFrame(self.output_y[2])
+        f_rate_E.to_csv(self.output_dir+f'frateE_{file_addon}.csv', index=False)
+        f_rate_I.to_csv(self.output_dir+f'frateI_{file_addon}.csv', index=False)
+        f_rate_A.to_csv(self.output_dir+f'frateA_{file_addon}.csv', index=False)
+        
+        #noise_df = pd.DataFrame(self.output_noise)
+        #y_df.to_csv(self.output_dir)
+        #noise_df
 
 
 
