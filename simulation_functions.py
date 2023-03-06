@@ -24,11 +24,22 @@ class SimulationSession():
 
     def start_sim(self):
         
+        # setup connectivity matrix
+        self.set_connectivity()
+
         # let the integration happen!
         self.output_y, self.output_noise = self.integrator_RK4()
         self.output_y = np.moveaxis(self.output_y, 0, -2)
         self.safe_output()
 
+    def set_connectivity(self):
+        '''
+        In this function the connectivity matrix is setup 
+        '''
+
+        self.c_matrix = np.ones((self.nrAreas, self.nrAreas))
+        np.fill_diagonal(self.c_matrix, 0)
+        print(self.c_matrix)
 
     def derivatives(self, y, n, par):
         '''
@@ -43,7 +54,8 @@ class SimulationSession():
 
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
-        aux = par.Jee*y[0] - par.Jei*y[1] + par.thetaE-y[2] + n[0]
+        #print('y', y[0].shape)
+        aux = par.Jee*y[0] - par.Jei*y[1] + par.thetaE -y[2] + n[0] + self.par.G * np.matmul(self.c_matrix, y[0])  
 
         for area in np.arange(self.nrAreas):
             if aux[area] <= par.Edesp:
@@ -152,14 +164,14 @@ class SimulationSession():
 
     def safe_output(self):
 
-        file_addon = ''
+        file_addon = '_5areas_G1'
         print(self.output_y.shape)
         f_rate_E = pd.DataFrame(self.output_y[0])
         f_rate_I = pd.DataFrame(self.output_y[1])
         f_rate_A = pd.DataFrame(self.output_y[2])
-        f_rate_E.to_csv(self.output_dir+f'frateE_{file_addon}.csv', index=False)
-        f_rate_I.to_csv(self.output_dir+f'frateI_{file_addon}.csv', index=False)
-        f_rate_A.to_csv(self.output_dir+f'frateA_{file_addon}.csv', index=False)
+        f_rate_E.to_csv(self.output_dir+f'frateE{file_addon}.csv', index=False)
+        f_rate_I.to_csv(self.output_dir+f'frateI{file_addon}.csv', index=False)
+        f_rate_A.to_csv(self.output_dir+f'frateA{file_addon}.csv', index=False)
         
         #noise_df = pd.DataFrame(self.output_noise)
         #y_df.to_csv(self.output_dir)

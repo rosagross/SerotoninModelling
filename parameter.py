@@ -24,7 +24,10 @@ class Parameter():
 
         # noise (Ornstein-Uhlenbeck)
         #self.deltaGE = self.betaE
-
+        
+        # parameter determining strength of connectivity
+        self.G=1
+        
         # time constants
         self.tauE = 10
         self.tauI = 2
