@@ -9,7 +9,7 @@ class SimulationSession():
         # a session needs parameters and output functions 
         self.par = par
         self.nrVars = 3 # E, I and A
-        self.nrAreas = 5
+        self.nrAreas = 14
         self.sim_params = sim_params
         self.nrSteps = int((sim_params[1]-sim_params[0])/sim_params[2])
         self.initial_cond = np.zeros((self.nrVars, self.nrAreas))
@@ -30,14 +30,15 @@ class SimulationSession():
         # let the integration happen!
         self.output_y, self.output_noise = self.integrator_RK4()
         self.output_y = np.moveaxis(self.output_y, 0, -2)
-        self.safe_output()
+        self.save_output()
 
     def set_connectivity(self):
         '''
         In this function the connectivity matrix is setup 
         '''
-
-        self.c_matrix = np.ones((self.nrAreas, self.nrAreas))
+        self.c_matrix = pd.read_csv('MODEL_Cmatrix_grouped_cre-True_hemi-3_grouping-max.csv')
+        self.c_matrix.drop('Unnamed: 0', inplace=True, axis=1)
+        self.c_matrix = np.array(self.c_matrix)
         np.fill_diagonal(self.c_matrix, 0)
         print(self.c_matrix)
 
@@ -162,9 +163,9 @@ class SimulationSession():
         #plt.plot(self.output_noise[1], label='noise 2')
         #plt.show()
 
-    def safe_output(self):
-
-        file_addon = '_5areas_G1'
+    def save_output(self):
+        
+        file_addon = f'_14areas_G{self.par.G}_cmatrix'
         print(self.output_y.shape)
         f_rate_E = pd.DataFrame(self.output_y[0])
         f_rate_I = pd.DataFrame(self.output_y[1])

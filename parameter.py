@@ -26,7 +26,8 @@ class Parameter():
         #self.deltaGE = self.betaE
         
         # parameter determining strength of connectivity
-        self.G=1
+        self.G=0
+        
         
         # time constants
         self.tauE = 10
