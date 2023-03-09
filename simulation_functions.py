@@ -5,17 +5,18 @@ import math
 import pandas as pd
 class SimulationSession():
 
-    def __init__(self, par, sim_params, output_dir):
+    def __init__(self, par, sim_params, output_dir, nrAreas, filename_connectivity):
         # a session needs parameters and output functions 
         self.par = par
         self.nrVars = 3 # E, I and A
-        self.nrAreas = 14
+        self.nrAreas = nrAreas
         self.sim_params = sim_params
         self.nrSteps = int((sim_params[1]-sim_params[0])/sim_params[2])
         self.initial_cond = np.zeros((self.nrVars, self.nrAreas))
         self.noise_init = np.zeros((2, self.nrAreas))
         self.output_dir = output_dir
         self.rate = np.zeros((self.nrVars, self.nrSteps, self.nrAreas))
+        self.filename_connectivity = filename_connectivity
 
         # the random values for the noise are generated now already
         # TODO: check if the the noise is correct (with the mu and sigma)
@@ -24,8 +25,9 @@ class SimulationSession():
 
     def start_sim(self):
         
-        # setup connectivity matrix
+        # setup connectivity matrix and the parameter arrays
         self.set_connectivity()
+        self.set_parameter()
 
         # let the integration happen!
         self.output_y, self.output_noise = self.integrator_RK4()
@@ -36,11 +38,34 @@ class SimulationSession():
         '''
         In this function the connectivity matrix is setup 
         '''
-        self.c_matrix = pd.read_csv('MODEL_Cmatrix_grouped_cre-True_hemi-3_grouping-max.csv')
+
+        # connectivity matrix for the 14 regions
+        self.c_matrix = pd.read_csv(self.filename_connectivity)
         self.c_matrix.drop('Unnamed: 0', inplace=True, axis=1)
         self.c_matrix = np.array(self.c_matrix)
         np.fill_diagonal(self.c_matrix, 0)
-        print(self.c_matrix)
+
+        # connectivity of DRN 
+        self.drn_connect = pd.read_csv("drn_connectivity.csv")
+
+    def set_parameter(self):
+        ''' 
+        Set up the thetaE and betaE parameter. We take the values from the parameter/main file
+        and make a matrix out of it so that we can have the correct parameter combination
+        for every area. Some areas show up and down states, others only show upstates.
+        '''    
+
+        self.thetaE_array = np.empty(self.nrAreas)
+        self.thetaE_array.fill(self.par.thetaE)
+        self.betaE_array = np.empty(self.nrAreas)
+        self.betaE_array.fill(self.par.betaE)
+
+        self.thetaE_array[self.par.Up_areas] = self.par.thetaE_UP
+        self.betaE_array[self.par.Up_areas] = self.par.betaE_UP
+
+        print('theta\n',self.thetaE_array)
+        print('\nbeta\n', self.betaE_array)
+
 
     def derivatives(self, y, n, par):
         '''
@@ -56,7 +81,7 @@ class SimulationSession():
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
         #print('y', y[0].shape)
-        aux = par.Jee*y[0] - par.Jei*y[1] + par.thetaE -y[2] + n[0] + self.par.G * np.matmul(self.c_matrix, y[0])  
+        aux = par.Jee*y[0] - par.Jei*y[1] + self.thetaE_array -y[2] + n[0] #+ self.par.G * np.matmul(self.c_matrix, y[0])  
 
         for area in np.arange(self.nrAreas):
             if aux[area] <= par.Edesp:
@@ -73,7 +98,11 @@ class SimulationSession():
                 dy[1][area] = (-y[1][area]+par.Islope*(aux[area]-par.Idesp))/par.tauI
 
         # derivative of A - adaptation rate
-        dy[2] = (-y[2]+par.betaE*y[0])/par.tauAdapt
+        #print('computation test: y: ', y[0])
+        #print('beta and y:', self.betaE_array*y[0])
+
+
+        dy[2] = (-y[2]+self.betaE_array*y[0])/par.tauAdapt
 
         #print('dy', dy)
         return dy
@@ -129,7 +158,16 @@ class SimulationSession():
             noise_current[0] = noise_current[0] *noiseDummy1+noiseDummy2*self.random_vals[0,iter,:]
             noise_current[1] = noise_current[1] *noiseDummy1+noiseDummy2*self.random_vals[1,iter,:]
             
-            
+            # serotonin stimulation 
+            # doesnt make sense yet ... this would simply increase the firing rate  
+            #if (step >= 2500) and (step <= 2700):
+            #    #print('stimualtion')
+            #    extra_input = self.drn_connect * self.par.S
+            #    #print(extra_input.shape)
+            #    #print(y_current[0].shape)
+            #    y_current[0] = y_current[0] + np.squeeze(extra_input)
+
+
             k+= 1
             if k == Tdt:
                 y.append(y_current)
@@ -165,8 +203,8 @@ class SimulationSession():
 
     def save_output(self):
         
-        file_addon = f'_14areas_G{self.par.G}_cmatrix'
-        print(self.output_y.shape)
+        extra = "serotoninTEST"
+        file_addon = f'_{self.nrAreas}areas_G{self.par.G}_cmatrix_{extra}'
         f_rate_E = pd.DataFrame(self.output_y[0])
         f_rate_I = pd.DataFrame(self.output_y[1])
         f_rate_A = pd.DataFrame(self.output_y[2])
