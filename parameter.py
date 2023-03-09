@@ -15,6 +15,11 @@ class Parameter():
         self.betaE = 0 
         self.betaI = 0
 
+        # thetaE and betaE for Up-state regions
+        self.thetaE_UP = 0 
+        self.betaE_UP = 0
+        self.Up_areas = [1, 3]
+
         # the 
         self.Eslope = 1
         self.Edesp = 5
@@ -27,7 +32,8 @@ class Parameter():
         
         # parameter determining strength of connectivity
         self.G=0
-        
+        # strength of serotonin stimulation
+        self.S=0
         
         # time constants
         self.tauE = 10
