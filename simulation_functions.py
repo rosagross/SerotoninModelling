@@ -81,7 +81,7 @@ class SimulationSession():
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
         #print('y', y[0].shape)
-        aux = par.Jee*y[0] - par.Jei*y[1] + self.thetaE_array -y[2] + n[0] #+ self.par.G * np.matmul(self.c_matrix, y[0])  
+        aux = par.Jee*y[0] - par.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.par.G * np.matmul(self.c_matrix, y[0])  
 
         for area in np.arange(self.nrAreas):
             if aux[area] <= par.Edesp:

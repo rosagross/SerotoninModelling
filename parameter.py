@@ -31,7 +31,7 @@ class Parameter():
         #self.deltaGE = self.betaE
         
         # parameter determining strength of connectivity
-        self.G=0
+        self.G=4
         # strength of serotonin stimulation
         self.S=0
         

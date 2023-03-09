@@ -8,12 +8,12 @@ def main():
     # read in arguments
     total_sim = 5 # in sec
     sigmaN = 3.5
-    betaE = 3 # 0.7
+    betaE = 6 # 0.7
     t_start=0
     t_end=total_sim*1000 # in milliseconds
     dt=0.2
     x0=0
-    thetaE = 1
+    thetaE = -1
     tauN = 1
 
     # for the midbrain and hippocampus we need a separate thetaE & betaE parameter combination
