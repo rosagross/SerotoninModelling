@@ -23,6 +23,7 @@ def main():
 
     # get the parameter
     par = Parameter()
+    par.thetaE_set = thetaE # this is so that I can save the thetaE value in the filename later
     par.thetaE = par.Edesp - thetaE 
     par.tauN = tauN    
     par.sigmaN = sigmaN

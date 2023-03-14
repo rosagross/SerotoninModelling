@@ -11,14 +11,15 @@ class Parameter():
 
         # the effective threshold for population activation  
         self.thetaE = 0
-        self.thetaI = 0#25
+        self.thetaE_set = 0 # this is so that I can save the thetaE value in the filename later
+        self.thetaI = 0
         self.betaE = 0 
         self.betaI = 0
 
         # thetaE and betaE for Up-state regions
         self.thetaE_UP = 0 
         self.betaE_UP = 0
-        self.Up_areas = [1, 3]
+        self.Up_areas = [1, 3, 6, 10]
 
         # the 
         self.Eslope = 1
@@ -31,7 +32,7 @@ class Parameter():
         #self.deltaGE = self.betaE
         
         # parameter determining strength of connectivity
-        self.G=4
+        self.G=2
         # strength of serotonin stimulation
         self.S=0
         

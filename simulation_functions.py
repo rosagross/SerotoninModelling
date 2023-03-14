@@ -203,8 +203,8 @@ class SimulationSession():
 
     def save_output(self):
         
-        extra = "serotoninTEST"
-        file_addon = f'_{self.nrAreas}areas_G{self.par.G}_cmatrix_{extra}'
+        extra = "MidbrainUP"
+        file_addon = f'_{self.nrAreas}areas_G{self.par.G}_thetaE{self.par.thetaE_set}_beta{self.par.betaE}_{extra}'
         f_rate_E = pd.DataFrame(self.output_y[0])
         f_rate_I = pd.DataFrame(self.output_y[1])
         f_rate_A = pd.DataFrame(self.output_y[2])
