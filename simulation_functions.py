@@ -82,7 +82,7 @@ class SimulationSession():
         # aux is a dummy variable for part of the derivative
         #print('y', y[0].shape)
 
-        aux = par.Jee*y[0] - par.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.par.G * np.matmul(self.c_matrix, y[0])  
+        aux = par.Jee*y[0] - par.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.par.G * np.matmul(self.c_matrix, y[0]) - self.I
 
         for area in np.arange(self.nrAreas):
             if aux[area] <= par.Edesp:
@@ -119,7 +119,7 @@ class SimulationSession():
 
         noiseDummy1 = np.exp(-dt/self.par.tauN)
         noiseDummy2 = math.sqrt(((2*(self.par.sigmaN**2)/self.par.tauN)*self.par.tauN*0.5)*(1-math.exp(-dt/self.par.tauN)**2))
-        rk4Aux1=dt*0.500000000 #(1/2)
+        rk4Aux1=dt*0.500000000 # (1/2)
         rk4Aux2=dt*0.166666666 # (1/6)
         Tdt = int(1/dt)
         tsteps = np.arange(dt, t_end, dt)
@@ -134,10 +134,8 @@ class SimulationSession():
 
         # time counter for when to save the computed value
         k = 0 
-
-        # serotonin stimulation times
-        stim_times = [2000, 3000, 4000]
-        stim_duration = 500
+        # intitial serotonin stimulation is 0
+        self.I = 0
 
         # for every time step, we now have to find the solution of the derivative by integrating 
         for iter, step in enumerate(tsteps):
@@ -163,23 +161,16 @@ class SimulationSession():
             noise_current[0] = noise_current[0] * noiseDummy1+noiseDummy2*self.random_vals[0,iter,:]
             noise_current[1] = noise_current[1] * noiseDummy1+noiseDummy2*self.random_vals[1,iter,:]
             
-            # serotonin stimulation 
-            # modulate thetaE parameter 
-            if step in stim_times:
-                current_stim = step
-                self.thetaE_array.fill(self.par.Edesp-self.par.stimulation_thetaE)
-                self.thetaE_array[self.par.Up_areas] = self.par.thetaE_UP
-
-            if step == current_stim+stim_duration:
-                # restore the thetaE parameter
-                self.thetaE_array.fill(self.par.thetaE)
-                self.thetaE_array[self.par.Up_areas] = self.par.thetaE_UP
+            # serotonin stimulation   
+            if step in self.par.stim_times:
+                self.I = self.drn_connect * self.par.S
+            else:
+                self.I = 0
 
             k+= 1
             if k == Tdt:
                 y.append(y_current)
                 noise.append(noise_current)
-                
                 k = 0 
                 
         return np.array(y), np.array(noise).T

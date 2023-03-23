@@ -35,8 +35,10 @@ class Parameter():
         # parameter determining strength of connectivity
         self.G=1
         # strength of serotonin stimulation
-        self.S=0.5
-        
+        self.S=0
+        # serotonin stimulation times
+        self.stim_times = []
+
         # time constants
         self.tauE = 10
         self.tauI = 2
