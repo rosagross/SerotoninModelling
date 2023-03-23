@@ -81,6 +81,7 @@ class SimulationSession():
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
         #print('y', y[0].shape)
+
         aux = par.Jee*y[0] - par.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.par.G * np.matmul(self.c_matrix, y[0])  
 
         for area in np.arange(self.nrAreas):
@@ -134,6 +135,10 @@ class SimulationSession():
         # time counter for when to save the computed value
         k = 0 
 
+        # serotonin stimulation times
+        stim_times = [2000, 3000, 4000]
+        stim_duration = 500
+
         # for every time step, we now have to find the solution of the derivative by integrating 
         for iter, step in enumerate(tsteps):
 
@@ -154,19 +159,21 @@ class SimulationSession():
             y_current = y_current + rk4Aux2 * (aux1+aux3 + 2*aux4)
 
             # noise for every area individually
-            #print('noise', noise_current.shape)
-            noise_current[0] = noise_current[0] *noiseDummy1+noiseDummy2*self.random_vals[0,iter,:]
-            noise_current[1] = noise_current[1] *noiseDummy1+noiseDummy2*self.random_vals[1,iter,:]
+            # print('noise', noise_current.shape)
+            noise_current[0] = noise_current[0] * noiseDummy1+noiseDummy2*self.random_vals[0,iter,:]
+            noise_current[1] = noise_current[1] * noiseDummy1+noiseDummy2*self.random_vals[1,iter,:]
             
             # serotonin stimulation 
-            # doesnt make sense yet ... this would simply increase the firing rate  
-            #if (step >= 2500) and (step <= 2700):
-            #    #print('stimualtion')
-            #    extra_input = self.drn_connect * self.par.S
-            #    #print(extra_input.shape)
-            #    #print(y_current[0].shape)
-            #    y_current[0] = y_current[0] + np.squeeze(extra_input)
+            # modulate thetaE parameter 
+            if step in stim_times:
+                current_stim = step
+                self.thetaE_array.fill(self.par.Edesp-self.par.stimulation_thetaE)
+                self.thetaE_array[self.par.Up_areas] = self.par.thetaE_UP
 
+            if step == current_stim+stim_duration:
+                # restore the thetaE parameter
+                self.thetaE_array.fill(self.par.thetaE)
+                self.thetaE_array[self.par.Up_areas] = self.par.thetaE_UP
 
             k+= 1
             if k == Tdt:
@@ -203,7 +210,7 @@ class SimulationSession():
 
     def save_output(self):
         
-        extra = "MidbrainUP"
+        extra = "stimulationTEST"
         file_addon = f'_{self.nrAreas}areas_G{self.par.G}_thetaE{self.par.thetaE_set}_beta{self.par.betaE}_{extra}'
         f_rate_E = pd.DataFrame(self.output_y[0])
         f_rate_I = pd.DataFrame(self.output_y[1])

@@ -20,6 +20,7 @@ class Parameter():
         self.thetaE_UP = 0 
         self.betaE_UP = 0
         self.Up_areas = [1, 3, 6, 10]
+        self.stimulation_thetaE = 15
 
         # the 
         self.Eslope = 1
@@ -32,9 +33,9 @@ class Parameter():
         #self.deltaGE = self.betaE
         
         # parameter determining strength of connectivity
-        self.G=2
+        self.G=1
         # strength of serotonin stimulation
-        self.S=0
+        self.S=0.5
         
         # time constants
         self.tauE = 10
