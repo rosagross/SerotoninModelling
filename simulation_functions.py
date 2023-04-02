@@ -1,32 +1,140 @@
-
+import os
+import os.path as op
 import numpy as np 
 import matplotlib.pyplot as plt
 import math
+from datetime import datetime
 import pandas as pd
+import yaml
+
 class SimulationSession():
 
-    def __init__(self, par, sim_params, output_dir, nrAreas, filename_connectivity):
+    def __init__(self, output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G):
         # a session needs parameters and output functions 
-        self.par = par
         self.nrVars = 3 # E, I and A
         self.nrAreas = nrAreas
-        self.sim_params = sim_params
-        self.nrSteps = int((sim_params[1]-sim_params[0])/sim_params[2])
         self.initial_cond = np.zeros((self.nrVars, self.nrAreas))
         self.noise_init = np.zeros((2, self.nrAreas))
         self.output_dir = output_dir
-        self.rate = np.zeros((self.nrVars, self.nrSteps, self.nrAreas))
         self.filename_connectivity = filename_connectivity
+        self.settings_file = settings_file
+        self.drn_connect_file = drn_connect_file
+        self.settings = self.load_settings()
+        self.init_parameters(self.settings, G)
+        self.stimulation_times = self.set_stimulation()
+        self.save_settings()
 
-        # the random values for the noise are generated now already
-        # TODO: check if the the noise is correct (with the mu and sigma)
+        # generating the random values for the noise 
+        self.t_end = self.total_sim * 1000
+        self.nrSteps = int((self.t_end-0)/self.dt)
         self.random_vals = np.random.normal(0,1,(2,self.nrSteps,self.nrAreas))
+
+
+    def load_settings(self):
+        
+        # load settingsfile 
+        with open(self.settings_file, 'r', encoding='utf8') as f_in:
+            settings = yaml.safe_load(f_in)
+
+        return settings
+    
+    
+    def save_settings(self):
+
+        # make a folder where I can save the firing rate together with the setting file
+        extra = ""
+        self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
+        self.output_dir = op.join(self.output_dir, self.file_addon)
+
+        if os.path.exists(self.output_dir):
+            print("Warning: output directory already exists. Renaming to avoid overwriting.")
+            self.output_dir = self.output_dir + '_' + datetime.now().strftime('%Y%m%d%H%M%S')
+            os.makedirs(self.output_dir)
+        else:
+            print('Folder created')
+            os.makedirs(self.output_dir)
+        
+        settings_out = op.join(self.output_dir, self.file_addon + '_expsettings.yml')
+        with open(settings_out, 'w') as f_out:  # write settings to disk
+            yaml.dump(self.settings, f_out, indent=4, default_flow_style=False)
+
+    
+    def init_parameters(self, config, G):
+        # connectivity parameters
+        self.Jee = config['Parameter']['Jee']
+        self.Jei = config['Parameter']['Jei']
+        self.Jie = config['Parameter']['Jie']
+        self.Jii = config['Parameter']['Jii']
+
+        # effective threshold for population activation
+        self.thetaE = config['Parameter']['thetaE']
+        self.thetaI = config['Parameter']['thetaI']
+        self.betaE = config['Parameter']['betaE']
+        self.betaI = config['Parameter']['betaI']
+        self.Eslope = config['Parameter']['Eslope']
+        self.Edesp = config['Parameter']['Edesp']
+        self.Islope = config['Parameter']['Islope']
+        self.Idesp = config['Parameter']['Idesp']
+
+        # thetaE and betaE for Up-state regions
+        self.thetaE_UP = config['Parameter']['thetaE_UP']
+        self.betaE_UP = config['Parameter']['betaE_UP']
+        self.Up_areas = config['Parameter']['Up_areas']
+
+        # G, S, and stim_ITI parameters
+        if G is not None:
+            config['Parameter']['G'] = float(G)
+
+        self.G = config['Parameter']['G']
+        self.S = config['Parameter']['S']
+        self.stim_ITI = config['Parameter']['stim_ITI']
+        self.stim_dur = config['Parameter']['stim_dur']
+
+        # time constants and noise parameter
+        self.tauE = config['Parameter']['tauE']
+        self.tauI = config['Parameter']['tauI']
+        self.tauAdapt = config['Parameter']['tauAdapt']
+        self.tauN = config['Parameter']['tauN']
+        self.sigmaN = config['Parameter']['sigmaN']
+
+        # session settings
+        self.total_sim = config['Session settings']['total_sim']
+        self.sigmaN = config['Session settings']['sigmaN']
+        self.dt = config['Session settings']['dt']
+        self.x0 = config['Session settings']['x0']
+
+
+    def set_stimulation(self):
+        '''
+        Compute the array with serotonin stimulation times. 
+        '''
+
+        # create a time window of 1 sec stimulation time 
+        total = self.total_sim * 1000
+        stimulation_duration = self.stim_dur * 1000
+        end = 0
+        stimulation = True 
+        stimulation_array = []
+
+        while stimulation:
+            pause = np.random.randint(self.stim_ITI[0]*1000, self.stim_ITI[1]*1000)
+            start = end + pause
+            stimulation_array.append(list(np.arange(start, start+stimulation_duration, 1)))
+            end = start + stimulation_duration
+            
+            if start + stimulation_duration > total:
+                
+                stimulation = False
+                stimulation_array.pop()
+                
+        stimulation_array = np.array(stimulation_array).flatten()
+        return stimulation_array
 
 
     def start_sim(self):
         
         # setup connectivity matrix and the parameter arrays
-        self.set_connectivity()
+        self.set_connectivity(self.drn_connect_file)
         self.set_parameter()
 
         # let the integration happen!
@@ -34,7 +142,8 @@ class SimulationSession():
         self.output_y = np.moveaxis(self.output_y, 0, -2)
         self.save_output()
 
-    def set_connectivity(self):
+
+    def set_connectivity(self, drn_connect_file):
         '''
         In this function the connectivity matrix is setup 
         '''
@@ -46,7 +155,8 @@ class SimulationSession():
         np.fill_diagonal(self.c_matrix, 0)
 
         # connectivity of DRN 
-        self.drn_connect = pd.read_csv("drn_connectivity.csv")
+        self.drn_connect = pd.read_csv(drn_connect_file)
+
 
     def set_parameter(self):
         ''' 
@@ -55,24 +165,26 @@ class SimulationSession():
         for every area. Some areas show up and down states, others only show upstates.
         '''    
 
+        # this is replicated from the original C++ code  
+        # the thetaE value entered in the parameter file is the one that can be used in  
+        # figure 5 of the Jercog (2017) paper 
+        thetaE_thresh = self.Edesp - self.thetaE
+        thetaE_Up_thresh = self.Edesp - self.thetaE_UP
+
         self.thetaE_array = np.empty(self.nrAreas)
-        self.thetaE_array.fill(self.par.thetaE)
+        self.thetaE_array.fill(thetaE_thresh)
         self.betaE_array = np.empty(self.nrAreas)
-        self.betaE_array.fill(self.par.betaE)
+        self.betaE_array.fill(self.betaE)
 
-        self.thetaE_array[self.par.Up_areas] = self.par.thetaE_UP
-        self.betaE_array[self.par.Up_areas] = self.par.betaE_UP
-
-        print('theta\n',self.thetaE_array)
-        print('\nbeta\n', self.betaE_array)
+        self.thetaE_array[self.Up_areas] = thetaE_Up_thresh
+        self.betaE_array[self.Up_areas] = self.betaE_UP
 
 
-    def derivatives(self, y, n, par):
+    def derivatives(self, y, n):
         '''
         Parameter:
         y : array, 3 x nrAreas time series of the firing rate values of E, I and A. 
         n : array, 3 x nrAreas time series of noise (Ornstein-Uhlenbeck).
-        par : parameter object
         returns : dy, 3 x nrAreas element array with the derivatives of E, I and A
         '''
 
@@ -80,32 +192,26 @@ class SimulationSession():
 
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
-        #print('y', y[0].shape)
 
-        aux = par.Jee*y[0] - par.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.par.G * np.matmul(self.c_matrix, y[0]) - self.I
+        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.G * np.matmul(self.c_matrix, y[0]) - self.I
 
         for area in np.arange(self.nrAreas):
-            if aux[area] <= par.Edesp:
-                dy[0][area] = -y[0][area]/par.tauE
+            if aux[area] <= self.Edesp:
+                dy[0][area] = -y[0][area]/self.tauE
             else:
-                dy[0][area] = (-y[0][area] + par.Eslope*(aux[area]-par.Edesp))/par.tauE
+                dy[0][area] = (-y[0][area] + self.Eslope*(aux[area]-self.Edesp))/self.tauE
             
         # derivative of I - rate 
-        aux = par.Jie*y[0] - par.Jii*y[1] + par.thetaI + n[1]
+        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1]
         for area in np.arange(self.nrAreas):
-            if aux[area] <= par.Idesp:
-                dy[1][area] = -y[1][area]/par.tauI
+            if aux[area] <= self.Idesp:
+                dy[1][area] = -y[1][area]/self.tauI
             else:
-                dy[1][area] = (-y[1][area]+par.Islope*(aux[area]-par.Idesp))/par.tauI
+                dy[1][area] = (-y[1][area]+self.Islope*(aux[area]-self.Idesp))/self.tauI
 
         # derivative of A - adaptation rate
-        #print('computation test: y: ', y[0])
-        #print('beta and y:', self.betaE_array*y[0])
+        dy[2] = (-y[2]+self.betaE_array*y[0])/self.tauAdapt
 
-
-        dy[2] = (-y[2]+self.betaE_array*y[0])/par.tauAdapt
-
-        #print('dy', dy)
         return dy
 
 
@@ -114,15 +220,12 @@ class SimulationSession():
         The firing rate is computed analytically by using the Runge-Kutta method.  
         '''
 
-        dt = self.sim_params[2]
-        t_end = self.sim_params[1]
-
-        noiseDummy1 = np.exp(-dt/self.par.tauN)
-        noiseDummy2 = math.sqrt(((2*(self.par.sigmaN**2)/self.par.tauN)*self.par.tauN*0.5)*(1-math.exp(-dt/self.par.tauN)**2))
-        rk4Aux1=dt*0.500000000 # (1/2)
-        rk4Aux2=dt*0.166666666 # (1/6)
-        Tdt = int(1/dt)
-        tsteps = np.arange(dt, t_end, dt)
+        noiseDummy1 = np.exp(-self.dt/self.tauN)
+        noiseDummy2 = math.sqrt(((2*(self.sigmaN**2)/self.tauN)*self.tauN*0.5)*(1-math.exp(-self.dt/self.tauN)**2))
+        rk4Aux1=self.dt*0.500000000 # (1/2)
+        rk4Aux2=self.dt*0.166666666 # (1/6)
+        Tdt = int(1/self.dt)
+        tsteps = np.arange(self.dt, self.t_end, self.dt)
 
         y_current = self.initial_cond # keeps track of the current value for the rate 
         noise_current = self.noise_init
@@ -141,31 +244,31 @@ class SimulationSession():
         for iter, step in enumerate(tsteps):
 
             # calculate the derivatives
-            aux1 = self.derivatives(y_current, noise_current, self.par)
+            aux1 = self.derivatives(y_current, noise_current)
             aux2 = y_current + rk4Aux1 * aux1
     
-            aux3 = self.derivatives(aux2, noise_current, self.par)
+            aux3 = self.derivatives(aux2, noise_current)
             aux2 = y_current + rk4Aux1 * aux3
 
-            aux4 = self.derivatives(aux2, noise_current, self.par)
-            aux2 = y_current + dt * aux4
+            aux4 = self.derivatives(aux2, noise_current)
+            aux2 = y_current + self.dt * aux4
 
             aux4 += aux3
 
-            aux3 = self.derivatives(aux2, noise_current, self.par)
+            aux3 = self.derivatives(aux2, noise_current)
 
             y_current = y_current + rk4Aux2 * (aux1+aux3 + 2*aux4)
 
             # noise for every area individually
-            # print('noise', noise_current.shape)
             noise_current[0] = noise_current[0] * noiseDummy1+noiseDummy2*self.random_vals[0,iter,:]
             noise_current[1] = noise_current[1] * noiseDummy1+noiseDummy2*self.random_vals[1,iter,:]
             
             # serotonin stimulation   
-            if step in self.par.stim_times:
-                self.I = self.drn_connect * self.par.S
+            if step in self.stimulation_times:
+                #print("STIMULATION - strength:", self.S)
+                self.I = np.squeeze(self.drn_connect * self.S)
             else:
-                self.I = 0
+                self.I = np.zeros(self.nrAreas)
 
             k+= 1
             if k == Tdt:
@@ -174,13 +277,7 @@ class SimulationSession():
                 k = 0 
                 
         return np.array(y), np.array(noise).T
-
-# TODO: write this for comparison!
-    def integrator_euler(self):
-        '''
-        The firing rate is computed analytically by using the Euler method. This
-        is a bit less precise than the RK4 method.
-        '''
+    
 
     def plot_results(self):
         print('size output', self.output_y.shape, self.output_noise.shape)
@@ -189,30 +286,19 @@ class SimulationSession():
         #plt.plot(self.output_y[2], label='A')
         plt.legend()
         plt.show()
-        # print(self.output_noise[0])
-
         plt.plot(self.output_y[2], label='A')
         plt.legend()
         plt.show()
 
-        #plt.plot(self.output_noise[0], label='noise 1')
-        #plt.plot(self.output_noise[1], label='noise 2')
-        #plt.show()
 
     def save_output(self):
         
-        extra = "stimulationTEST"
-        file_addon = f'_{self.nrAreas}areas_G{self.par.G}_thetaE{self.par.thetaE_set}_beta{self.par.betaE}_{extra}'
         f_rate_E = pd.DataFrame(self.output_y[0])
         f_rate_I = pd.DataFrame(self.output_y[1])
         f_rate_A = pd.DataFrame(self.output_y[2])
-        f_rate_E.to_csv(self.output_dir+f'frateE{file_addon}.csv', index=False)
-        f_rate_I.to_csv(self.output_dir+f'frateI{file_addon}.csv', index=False)
-        f_rate_A.to_csv(self.output_dir+f'frateA{file_addon}.csv', index=False)
+        f_rate_E.to_csv(op.join(self.output_dir, f'frateE_{self.file_addon}.csv'), index=False)
+        f_rate_I.to_csv(op.join(self.output_dir, f'frateI_{self.file_addon}.csv'), index=False)
+        f_rate_A.to_csv(op.join(self.output_dir, f'frateA_{self.file_addon}.csv'), index=False)
         
-        #noise_df = pd.DataFrame(self.output_noise)
-        #y_df.to_csv(self.output_dir)
-        #noise_df
-
 
 

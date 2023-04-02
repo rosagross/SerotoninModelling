@@ -1,0 +1,45 @@
+Parameter:
+  # connectivity parameters
+  Jee: 5
+  Jei: 1
+  Jie: 10
+  Jii: 0.5
+
+  # the effective threshold for population activation  
+  thetaE: -1 
+  thetaI: 0
+  betaE: 6
+  betaI: 0
+  Eslope: 1
+  Edesp: 5
+  Islope: 4
+  Idesp: 25
+
+  # thetaE and betaE for Up-state regions
+  thetaE_UP: -5
+  betaE_UP: 1
+  Up_areas:
+    - 1
+    - 3
+    - 6
+    - 10
+
+  
+  G: 0.8 # parameter determining strength of connectivity
+  S: 0 # serotonin stimulation strength
+  stim_ITI: [3, 6] # stimulation inter-trial interval 
+  stim_dur: 1 # in sec
+
+  # time constants and noise parameter
+  tauE: 10
+  tauI: 2
+  tauAdapt: 500
+  tauN: 1
+  sigmaN: 3.5
+
+Session settings:
+  # read in arguments
+  total_sim: 10 # in sec
+  sigmaN: 3.5
+  dt: 0.2
+  x0: 0
