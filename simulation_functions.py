@@ -138,6 +138,7 @@ class SimulationSession():
         # serotonin stimulation times
         stim_times = [2000, 3000, 4000]
         stim_duration = 500
+        current_stim = - (stim_duration+1)
 
         # for every time step, we now have to find the solution of the derivative by integrating 
         for iter, step in enumerate(tsteps):
