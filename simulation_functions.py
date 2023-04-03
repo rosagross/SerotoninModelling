@@ -9,7 +9,7 @@ import yaml
 
 class SimulationSession():
 
-    def __init__(self, output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G):
+    def __init__(self, output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G, S):
         # a session needs parameters and output functions 
         self.nrVars = 3 # E, I and A
         self.nrAreas = nrAreas
@@ -20,7 +20,7 @@ class SimulationSession():
         self.settings_file = settings_file
         self.drn_connect_file = drn_connect_file
         self.settings = self.load_settings()
-        self.init_parameters(self.settings, G)
+        self.init_parameters(self.settings, G, S)
         self.stimulation_times = self.set_stimulation()
         self.save_settings()
 
@@ -41,7 +41,7 @@ class SimulationSession():
     
     def save_settings(self):
 
-        # make a folder where I can save the firing rate together with the setting file
+        # make a folder where I can save the firing rate together with the setting file adn the stimulation times
         extra = ""
         self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
         self.output_dir = op.join(self.output_dir, self.file_addon)
@@ -58,8 +58,12 @@ class SimulationSession():
         with open(settings_out, 'w') as f_out:  # write settings to disk
             yaml.dump(self.settings, f_out, indent=4, default_flow_style=False)
 
+        # safe the stimulation array in a csv
+        pd.DataFrame(self.stimulation_times).to_csv(op.join(self.output_dir, f'{self.file_addon}_stimulation_times.csv'), index=False)
+
+
     
-    def init_parameters(self, config, G):
+    def init_parameters(self, config, G, S):
         # connectivity parameters
         self.Jee = config['Parameter']['Jee']
         self.Jei = config['Parameter']['Jei']
@@ -86,6 +90,10 @@ class SimulationSession():
             config['Parameter']['G'] = float(G)
 
         self.G = config['Parameter']['G']
+
+        if S is not None:
+            config['Parameter']['S'] = float(S)
+
         self.S = config['Parameter']['S']
         self.stim_ITI = config['Parameter']['stim_ITI']
         self.stim_dur = config['Parameter']['stim_dur']
@@ -128,6 +136,7 @@ class SimulationSession():
                 stimulation_array.pop()
                 
         stimulation_array = np.array(stimulation_array).flatten()
+
         return stimulation_array
 
 
@@ -192,7 +201,7 @@ class SimulationSession():
 
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
-
+        #print(self.I)
         aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.G * np.matmul(self.c_matrix, y[0]) - self.I
 
         for area in np.arange(self.nrAreas):
@@ -202,7 +211,7 @@ class SimulationSession():
                 dy[0][area] = (-y[0][area] + self.Eslope*(aux[area]-self.Edesp))/self.tauE
             
         # derivative of I - rate 
-        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1]
+        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] 
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Idesp:
                 dy[1][area] = -y[1][area]/self.tauI
@@ -265,8 +274,10 @@ class SimulationSession():
             
             # serotonin stimulation   
             if step in self.stimulation_times:
-                #print("STIMULATION - strength:", self.S)
+                print("STIMULATION - strength:", self.S, step)
                 self.I = np.squeeze(self.drn_connect * self.S)
+                #self.I = np.ones(14) * self.S
+                #print(self.I)
             else:
                 self.I = np.zeros(self.nrAreas)
 

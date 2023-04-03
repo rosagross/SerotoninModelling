@@ -17,8 +17,12 @@ def main():
     if not os.path.exists('./data/firing_rates/'):
         os.mkdir('./data/firing_rates/')
 
+    # serotonin stimulation 
+    S_parameters = [50] #np.arange(10,100,10)
+
     # create an array with many G parameters within 1 array 
-    G_parameters = np.arange(1.1, 3, 0.1)
+    G_parameters = [0, 3] #np.arange(0, 10, 1)
+
     plot_results = False
 
     for G in G_parameters:
@@ -26,11 +30,13 @@ def main():
         G_param = np.round(G, 1)
         print(f'\nSimulation with G = {G_param}')
 
-        # create the simulation session 
-        sim_session = SimulationSession(output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G_param)
-        sim_session.start_sim()
-        if plot_results:
-            sim_session.plot_results()
+        for S in S_parameters:
+            # create the simulation session 
+            S_param =  np.round(S, 1)
+            sim_session = SimulationSession(output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G_param, S_param)
+            sim_session.start_sim()
+            if plot_results:
+                sim_session.plot_results()
 
 
 if __name__ == '__main__':
