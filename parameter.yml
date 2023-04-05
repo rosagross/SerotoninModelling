@@ -39,7 +39,7 @@ Parameter:
 
 Session settings:
   # read in arguments
-  total_sim: 10 # in sec
+  total_sim: 20 # in sec
   sigmaN: 3.5
   dt: 0.2
   x0: 0

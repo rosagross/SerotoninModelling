@@ -9,7 +9,7 @@ import yaml
 
 class SimulationSession():
 
-    def __init__(self, output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G, S):
+    def __init__(self, output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G, S, session=''):
         # a session needs parameters and output functions 
         self.nrVars = 3 # E, I and A
         self.nrAreas = nrAreas
@@ -19,6 +19,7 @@ class SimulationSession():
         self.filename_connectivity = filename_connectivity
         self.settings_file = settings_file
         self.drn_connect_file = drn_connect_file
+        self.session = '_' + str(session)
         self.settings = self.load_settings()
         self.init_parameters(self.settings, G, S)
         self.stimulation_times = self.set_stimulation()
@@ -42,24 +43,31 @@ class SimulationSession():
     def save_settings(self):
 
         # make a folder where I can save the firing rate together with the setting file adn the stimulation times
-        extra = ""
+        extra = "_sessions"
         self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
         self.output_dir = op.join(self.output_dir, self.file_addon)
 
-        if os.path.exists(self.output_dir):
-            print("Warning: output directory already exists. Renaming to avoid overwriting.")
-            self.output_dir = self.output_dir + '_' + datetime.now().strftime('%Y%m%d%H%M%S')
-            os.makedirs(self.output_dir)
+        # if we run several sessions we want to have them all in the same folder and not make a new one with the date and time
+        if extra == '_sessions':
+            if not os.path.exists(self.output_dir):
+                print('Folder created')
+                os.makedirs(self.output_dir)
+
         else:
-            print('Folder created')
-            os.makedirs(self.output_dir)
+            if os.path.exists(self.output_dir):
+                print("Warning: output directory already exists. Renaming to avoid overwriting.")
+                self.output_dir = self.output_dir + '_' + datetime.now().strftime('%Y%m%d%H%M%S')
+                os.makedirs(self.output_dir)
+            else:
+                print('Folder created')
+                os.makedirs(self.output_dir)
         
-        settings_out = op.join(self.output_dir, self.file_addon + '_expsettings.yml')
+        settings_out = op.join(self.output_dir, self.file_addon + self.session + '_expsettings.yml')
         with open(settings_out, 'w') as f_out:  # write settings to disk
             yaml.dump(self.settings, f_out, indent=4, default_flow_style=False)
 
         # safe the stimulation array in a csv
-        pd.DataFrame(self.stimulation_times).to_csv(op.join(self.output_dir, f'{self.file_addon}_stimulation_times.csv'), index=False)
+        pd.DataFrame(self.stimulation_times).to_csv(op.join(self.output_dir, f'{self.file_addon}{self.session}_stimulation_times.csv'), index=False)
 
 
     
@@ -127,17 +135,14 @@ class SimulationSession():
         while stimulation:
             pause = np.random.randint(self.stim_ITI[0]*1000, self.stim_ITI[1]*1000)
             start = end + pause
-            stimulation_array.append(list(np.arange(start, start+stimulation_duration, 1)))
             end = start + stimulation_duration
-            
-            if start + stimulation_duration > total:
-                
+            stimulation_array.append([start, end])
+
+            if end > total:
                 stimulation = False
                 stimulation_array.pop()
-                
-        stimulation_array = np.array(stimulation_array).flatten()
-
-        return stimulation_array
+        
+        return np.array(stimulation_array)
 
 
     def start_sim(self):
@@ -211,7 +216,7 @@ class SimulationSession():
                 dy[0][area] = (-y[0][area] + self.Eslope*(aux[area]-self.Edesp))/self.tauE
             
         # derivative of I - rate 
-        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] 
+        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1]
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Idesp:
                 dy[1][area] = -y[1][area]/self.tauI
@@ -272,14 +277,13 @@ class SimulationSession():
             noise_current[0] = noise_current[0] * noiseDummy1+noiseDummy2*self.random_vals[0,iter,:]
             noise_current[1] = noise_current[1] * noiseDummy1+noiseDummy2*self.random_vals[1,iter,:]
             
-            # serotonin stimulation   
-            if step in self.stimulation_times:
-                print("STIMULATION - strength:", self.S, step)
+            # START of serotonin stimulation   
+            if round(step, 1) in self.stimulation_times[:,0]:
                 self.I = np.squeeze(self.drn_connect * self.S)
-                #self.I = np.ones(14) * self.S
-                #print(self.I)
-            else:
-                self.I = np.zeros(self.nrAreas)
+
+            # END of serotonin stimulation
+            if round(step, 1) in self.stimulation_times[:,1]:
+                self.I = 0
 
             k+= 1
             if k == Tdt:
@@ -307,9 +311,9 @@ class SimulationSession():
         f_rate_E = pd.DataFrame(self.output_y[0])
         f_rate_I = pd.DataFrame(self.output_y[1])
         f_rate_A = pd.DataFrame(self.output_y[2])
-        f_rate_E.to_csv(op.join(self.output_dir, f'frateE_{self.file_addon}.csv'), index=False)
-        f_rate_I.to_csv(op.join(self.output_dir, f'frateI_{self.file_addon}.csv'), index=False)
-        f_rate_A.to_csv(op.join(self.output_dir, f'frateA_{self.file_addon}.csv'), index=False)
+        f_rate_E.to_csv(op.join(self.output_dir, f'frateE_{self.file_addon}{self.session}.csv'), index=False)
+        f_rate_I.to_csv(op.join(self.output_dir, f'frateI_{self.file_addon}{self.session}.csv'), index=False)
+        f_rate_A.to_csv(op.join(self.output_dir, f'frateA_{self.file_addon}{self.session}.csv'), index=False)
         
 
 
