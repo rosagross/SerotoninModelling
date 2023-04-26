@@ -43,12 +43,12 @@ class SimulationSession():
     def save_settings(self):
 
         # make a folder where I can save the firing rate together with the setting file adn the stimulation times
-        extra = "_sessions"
+        extra = "InhibitPop_sessions"
         self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
         self.output_dir = op.join(self.output_dir, self.file_addon)
 
         # if we run several sessions we want to have them all in the same folder and not make a new one with the date and time
-        if extra == '_sessions':
+        if self.output_dir.endswith('sessions'):
             if not os.path.exists(self.output_dir):
                 print('Folder created')
                 os.makedirs(self.output_dir)
@@ -67,8 +67,15 @@ class SimulationSession():
             yaml.dump(self.settings, f_out, indent=4, default_flow_style=False)
 
         # safe the stimulation array in a csv
-        pd.DataFrame(self.stimulation_times).to_csv(op.join(self.output_dir, f'{self.file_addon}{self.session}_stimulation_times.csv'), index=False)
-
+        outdir = self.output_dir
+        print('exists', os.path.exists(outdir))
+        if not os.path.exists(outdir):
+            print('doesnt exist')
+            os.mkdir(outdir)
+        outname = self.file_addon + self.session + '_stimulation_times.csv'
+        print('outname', outname)
+        stim_times = pd.DataFrame(self.stimulation_times)
+        stim_times.to_csv(os.path.join(outdir, outname), index=False)
 
     
     def init_parameters(self, config, G, S):
@@ -138,7 +145,7 @@ class SimulationSession():
             end = start + stimulation_duration
             stimulation_array.append([start, end])
 
-            if end > total:
+            if end >= total:
                 stimulation = False
                 stimulation_array.pop()
         
@@ -207,7 +214,7 @@ class SimulationSession():
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
         #print(self.I)
-        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.G * np.matmul(self.c_matrix, y[0]) - self.I
+        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.G * np.matmul(self.c_matrix, y[0]) # - self.I
 
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Edesp:
@@ -216,7 +223,7 @@ class SimulationSession():
                 dy[0][area] = (-y[0][area] + self.Eslope*(aux[area]-self.Edesp))/self.tauE
             
         # derivative of I - rate 
-        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1]
+        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] + self.I
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Idesp:
                 dy[1][area] = -y[1][area]/self.tauI
