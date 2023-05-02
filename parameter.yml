@@ -24,11 +24,17 @@ Parameter:
     - 6
     - 10
 
-  
-  G: 0.8 # parameter determining strength of connectivity
-  S: 0 # serotonin stimulation strength
+  G: None # parameter determining strength of connectivity, actual value overwritten when simulation is run 
+  S: None # serotonin stimulation strength, actual value overwritten when simulation is run 
   stim_ITI: [3, 6] # stimulation inter-trial interval 
   stim_dur: 1 # in sec
+  
+  # every area should have a parameter that scales the average firing rate of the specific region
+  # like this, we can replicate real data more precisely
+  average_rate_scalerE: [2, 0, -5, 2, 0, -5, 5, 8, 10, 5, 0, 2, 4, 2] # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] #  
+  average_rate_scalerI: [0, 15, 0, 8, 0, 0, 10, 0, 3, 5, 12, 2, 0, 5] # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # 
+  # [5, -7, 8, 2, 6, 3, 2, 8, 18, 6, -2, 1.5, 9, 8]
+  # [1.8,2.5,2,3,1,2,1.1,2.5,1,2,0.9,1,1,2.2]
 
   # time constants and noise parameter
   tauE: 10
@@ -39,7 +45,7 @@ Parameter:
 
 Session settings:
   # read in arguments
-  total_sim: 20 # in sec
+  total_sim: 7 # in sec
   sigmaN: 3.5
   dt: 0.2
   x0: 0

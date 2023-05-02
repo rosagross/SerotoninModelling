@@ -13,15 +13,15 @@ def main():
     filename_connectivity = 'MODEL_Cmatrix_grouped_cre-False_hemi-3_grouping-median.csv'
     drn_connect_file = 'drn_connectivity_cre-True_hemi-3_grouping-median.csv'
     nrAreas = 14
-    nr_sessions = 10 # to get some error bars we run several sessions
+    nr_sessions = 1 # to get some error bars we run several sessions
 
     if not os.path.exists('./data/firing_rates/'):
         os.mkdir('./data/firing_rates/')
 
     # serotonin stimulation 
-    S_parameters = np.arange(0,100,10)
+    S_parameters = [0, 25, 50, 75] #np.arange(0,100,10)
     # create an array with many G parameters within 1 array 
-    G_parameters = np.arange(0, 5, 0.5)
+    G_parameters = np.arange(0, 6, 1)
 
     plot_results = False
 

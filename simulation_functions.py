@@ -43,7 +43,7 @@ class SimulationSession():
     def save_settings(self):
 
         # make a folder where I can save the firing rate together with the setting file adn the stimulation times
-        extra = "InhibitPop_sessions"
+        extra = "Mouse_sessions"
         self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
         self.output_dir = op.join(self.output_dir, self.file_addon)
 
@@ -68,12 +68,9 @@ class SimulationSession():
 
         # safe the stimulation array in a csv
         outdir = self.output_dir
-        print('exists', os.path.exists(outdir))
         if not os.path.exists(outdir):
-            print('doesnt exist')
             os.mkdir(outdir)
         outname = self.file_addon + self.session + '_stimulation_times.csv'
-        print('outname', outname)
         stim_times = pd.DataFrame(self.stimulation_times)
         stim_times.to_csv(os.path.join(outdir, outname), index=False)
 
@@ -113,6 +110,10 @@ class SimulationSession():
         self.stim_ITI = config['Parameter']['stim_ITI']
         self.stim_dur = config['Parameter']['stim_dur']
 
+        # parameter to scale the average firing rate of the regions individually. shape: (1 x nr_areas)
+        self.average_rate_scalerE =  np.array(config['Parameter']['average_rate_scalerE'])
+        self.average_rate_scalerI =  np.array(config['Parameter']['average_rate_scalerI'])
+
         # time constants and noise parameter
         self.tauE = config['Parameter']['tauE']
         self.tauI = config['Parameter']['tauI']
@@ -132,6 +133,10 @@ class SimulationSession():
         Compute the array with serotonin stimulation times. 
         '''
 
+        # check if the total simulation window is big enough for at least one stimulation
+        if self.stim_ITI[1] + 1 > self.total_sim:
+            print('! Warning: Choose an ITI that fits within the stimulation window or increase the simulation time !')
+
         # create a time window of 1 sec stimulation time 
         total = self.total_sim * 1000
         stimulation_duration = self.stim_dur * 1000
@@ -148,6 +153,8 @@ class SimulationSession():
             if end >= total:
                 stimulation = False
                 stimulation_array.pop()
+
+        print(np.array(stimulation_array))
         
         return np.array(stimulation_array)
 
@@ -214,7 +221,7 @@ class SimulationSession():
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
         #print(self.I)
-        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.G * np.matmul(self.c_matrix, y[0]) # - self.I
+        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.G * np.matmul(self.c_matrix, y[0]) - self.I + self.average_rate_scalerE
 
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Edesp:
@@ -223,7 +230,7 @@ class SimulationSession():
                 dy[0][area] = (-y[0][area] + self.Eslope*(aux[area]-self.Edesp))/self.tauE
             
         # derivative of I - rate 
-        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] + self.I
+        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] + self.average_rate_scalerI # + self.I 
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Idesp:
                 dy[1][area] = -y[1][area]/self.tauI
@@ -299,8 +306,7 @@ class SimulationSession():
                 k = 0 
                 
         return np.array(y), np.array(noise).T
-    
-
+ 
     def plot_results(self):
         print('size output', self.output_y.shape, self.output_noise.shape)
         plt.plot(self.output_y[0], label='E')
@@ -318,6 +324,21 @@ class SimulationSession():
         f_rate_E = pd.DataFrame(self.output_y[0])
         f_rate_I = pd.DataFrame(self.output_y[1])
         f_rate_A = pd.DataFrame(self.output_y[2])
+
+        mean_frateE = np.mean(f_rate_E, axis=0)
+        mean_frateI = np.mean(f_rate_I, axis=0)
+        mean_frate = np.mean(np.column_stack((mean_frateI, mean_frateE)), axis=1)
+
+        print('\nFiring rate Excitatory')
+        mouse_dataE = np.array([0, 4.607127, 2.476808, 0, 0, 2.670017, 0, 4.845092, 4.197598, 2.550010, 0, 1.428299, 0, 3.859802])
+        mouse_dataI = np.array([0, 10.608670, 6.859976, 0, 0, 6.348029, 0, 10.113730, 7.396667, 7.787373, 0, 4.846161, 0, 7.704969])
+        mouse_data_avg = [4.349698, 4.964803, 3.973509, 12.001597, 4.539685, 2.516638, 12.341531, 4.020949, 8.629651, 3.584227, 9.663268, 2.610587, 5.197313, 4.263197]
+        print(pd.concat((pd.DataFrame(mean_frateE, columns=['Emodel']), pd.DataFrame(mouse_dataE, columns=['Emouse']), pd.DataFrame(mean_frateI, columns=['Imodel']),pd.DataFrame(mouse_dataI, columns=['Imouse']),
+                         pd.DataFrame((mean_frateE-mouse_dataE), columns=['Ediff']), pd.DataFrame((mean_frateI - mean_frateE), columns=['I-E'])), axis=1))
+        print('Firing rate all')
+        print(pd.concat((pd.DataFrame(mean_frate, columns=['mean_model']), pd.DataFrame(mouse_data_avg, columns=['mean_mouse']), pd.DataFrame(mouse_data_avg-mean_frate, columns=['mean_diff'])), axis=1))
+
+
         f_rate_E.to_csv(op.join(self.output_dir, f'frateE_{self.file_addon}{self.session}.csv'), index=False)
         f_rate_I.to_csv(op.join(self.output_dir, f'frateI_{self.file_addon}{self.session}.csv'), index=False)
         f_rate_A.to_csv(op.join(self.output_dir, f'frateA_{self.file_addon}{self.session}.csv'), index=False)
