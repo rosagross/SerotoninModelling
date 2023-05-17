@@ -39,11 +39,11 @@ class SimulationSession():
 
         return settings
     
-    
+
     def save_settings(self):
 
         # make a folder where I can save the firing rate together with the setting file adn the stimulation times
-        extra = "Mouse_sessions"
+        extra = "NewDRN_TEST_sessions"
         self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
         self.output_dir = op.join(self.output_dir, self.file_addon)
 
@@ -134,7 +134,7 @@ class SimulationSession():
         '''
 
         # check if the total simulation window is big enough for at least one stimulation
-        if self.stim_ITI[1] + 1 > self.total_sim:
+        if self.stim_ITI[1] + 4 > self.total_sim:
             print('! Warning: Choose an ITI that fits within the stimulation window or increase the simulation time !')
 
         # create a time window of 1 sec stimulation time 
@@ -149,10 +149,14 @@ class SimulationSession():
             start = end + pause
             end = start + stimulation_duration
             stimulation_array.append([start, end])
+            print('stim array', stimulation_array)
 
-            if end >= total:
+            # we need some space after the stimulation period to observe if there is a rebound up state
+            if end + 4000 > total:
                 stimulation = False
                 stimulation_array.pop()
+
+        print('final stim array', stimulation_array)
 
         print(np.array(stimulation_array))
         
@@ -180,6 +184,10 @@ class SimulationSession():
         self.c_matrix = pd.read_csv(self.filename_connectivity)
         self.c_matrix.drop('Unnamed: 0', inplace=True, axis=1)
         self.c_matrix = np.array(self.c_matrix)
+
+        # uncomment this if you want a uniform connectivity matrix
+        #self.c_matrix = np.ones((self.nrAreas,self.nrAreas))*0.1
+
         np.fill_diagonal(self.c_matrix, 0)
 
         # connectivity of DRN 
@@ -221,7 +229,7 @@ class SimulationSession():
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
         #print(self.I)
-        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array -y[2] + n[0] + self.G * np.matmul(self.c_matrix, y[0]) - self.I + self.average_rate_scalerE
+        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array + n[0] - y[2] + self.G * np.matmul(self.c_matrix, y[0]) - self.I #+ self.average_rate_scalerE
 
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Edesp:
@@ -230,7 +238,7 @@ class SimulationSession():
                 dy[0][area] = (-y[0][area] + self.Eslope*(aux[area]-self.Edesp))/self.tauE
             
         # derivative of I - rate 
-        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] + self.average_rate_scalerI # + self.I 
+        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] + self.average_rate_scalerI #+ self.I 
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Idesp:
                 dy[1][area] = -y[1][area]/self.tauI
@@ -333,11 +341,15 @@ class SimulationSession():
         mouse_dataE = np.array([0, 4.607127, 2.476808, 0, 0, 2.670017, 0, 4.845092, 4.197598, 2.550010, 0, 1.428299, 0, 3.859802])
         mouse_dataI = np.array([0, 10.608670, 6.859976, 0, 0, 6.348029, 0, 10.113730, 7.396667, 7.787373, 0, 4.846161, 0, 7.704969])
         mouse_data_avg = [4.349698, 4.964803, 3.973509, 12.001597, 4.539685, 2.516638, 12.341531, 4.020949, 8.629651, 3.584227, 9.663268, 2.610587, 5.197313, 4.263197]
+        mouse_data_awake = np.array([3.167551, 6.128178, 3.164425, 12.686679, 3.984528, 3.040926, 12.146115, 5.614480, 4.976522, 3.015229, 7.420361, 2.926400, 6.624088, 4.435377])
         print(pd.concat((pd.DataFrame(mean_frateE, columns=['Emodel']), pd.DataFrame(mouse_dataE, columns=['Emouse']), pd.DataFrame(mean_frateI, columns=['Imodel']),pd.DataFrame(mouse_dataI, columns=['Imouse']),
                          pd.DataFrame((mean_frateE-mouse_dataE), columns=['Ediff']), pd.DataFrame((mean_frateI - mean_frateE), columns=['I-E'])), axis=1))
         print('Firing rate all')
-        print(pd.concat((pd.DataFrame(mean_frate, columns=['mean_model']), pd.DataFrame(mouse_data_avg, columns=['mean_mouse']), pd.DataFrame(mouse_data_avg-mean_frate, columns=['mean_diff'])), axis=1))
-
+        print(pd.concat((pd.DataFrame(mean_frate, columns=['mean_model']),
+                         pd.DataFrame(mouse_data_awake, columns=['mean_mouse_awake']),
+                         pd.DataFrame(mouse_data_awake-mean_frate, columns=['mean_diff_awake']),
+                         pd.DataFrame(mouse_data_avg, columns=['mean_mouse_sleep']),
+                         pd.DataFrame(mouse_data_avg-mean_frate, columns=['mean_diff_sleep'])), axis=1))
 
         f_rate_E.to_csv(op.join(self.output_dir, f'frateE_{self.file_addon}{self.session}.csv'), index=False)
         f_rate_I.to_csv(op.join(self.output_dir, f'frateI_{self.file_addon}{self.session}.csv'), index=False)

@@ -6,7 +6,7 @@ Parameter:
   Jii: 0.5
 
   # the effective threshold for population activation  
-  thetaE: -1 
+  thetaE: -1
   thetaI: 0
   betaE: 6
   betaI: 0
@@ -26,13 +26,13 @@ Parameter:
 
   G: None # parameter determining strength of connectivity, actual value overwritten when simulation is run 
   S: None # serotonin stimulation strength, actual value overwritten when simulation is run 
-  stim_ITI: [3, 6] # stimulation inter-trial interval 
+  stim_ITI: [1, 3] # [3, 6] # stimulation inter-trial interval 
   stim_dur: 1 # in sec
   
   # every area should have a parameter that scales the average firing rate of the specific region
   # like this, we can replicate real data more precisely
-  average_rate_scalerE: [2, 0, -5, 2, 0, -5, 5, 8, 10, 5, 0, 2, 4, 2] # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] #  
-  average_rate_scalerI: [0, 15, 0, 8, 0, 0, 10, 0, 3, 5, 12, 2, 0, 5] # [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # 
+  average_rate_scalerE: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] #  [2, 0, -5, 2, 0, -5, 5, 8, 10, 5, 0, 2, 4, 2] # 
+  average_rate_scalerI: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # [0, 15, 0, 8, 0, 0, 10, 0, 3, 5, 12, 2, 0, 5] # 
   # [5, -7, 8, 2, 6, 3, 2, 8, 18, 6, -2, 1.5, 9, 8]
   # [1.8,2.5,2,3,1,2,1.1,2.5,1,2,0.9,1,1,2.2]
 

@@ -10,8 +10,8 @@ def main():
 
     output_dir = os.path.join('data', 'firing_rates')
     settings_file = 'parameter.yml'
-    filename_connectivity = 'MODEL_Cmatrix_grouped_cre-False_hemi-3_grouping-median.csv'
-    drn_connect_file = 'drn_connectivity_cre-True_hemi-3_grouping-median.csv'
+    filename_connectivity = 'MODEL_Cmatrix_grouped_cre-False_hemi-3_grouping-median_thresh-0.005.csv'
+    drn_connect_file = 'drn_connectivity_cre-True_hemi-3_grouping-median_thresh-0.005.csv'
     nrAreas = 14
     nr_sessions = 1 # to get some error bars we run several sessions
 
@@ -19,11 +19,12 @@ def main():
         os.mkdir('./data/firing_rates/')
 
     # serotonin stimulation 
-    S_parameters = [0, 25, 50, 75] #np.arange(0,100,10)
+    S_parameters =  [0] #np.arange(80,240,40)
     # create an array with many G parameters within 1 array 
-    G_parameters = np.arange(0, 6, 1)
+    G_parameters =  [2] #np.arange(0, 6, 2)
 
-    plot_results = False
+    plot_results = True
+
 
     for G in G_parameters:
 
