@@ -10,13 +10,13 @@ Parameter:
   thetaI: 0
   betaE: 6
   betaI: 0
-  Eslope: 1
+  Eslope: [1,0.5,2,1,2,2,1,2,2,2,1,1,1,2]
   Edesp: 5
-  Islope: 4
+  Islope: [5,2,4,2,4,4,2,4,4,4,3,2,3,4]
   Idesp: 25
 
   # thetaE and betaE for Up-state regions
-  thetaE_UP: -5
+  thetaE_UP: 0
   betaE_UP: 1
   Up_areas:
     - 1
@@ -24,20 +24,22 @@ Parameter:
     - 6
     - 10
 
+  # thetaE and betaE for unclear Up/Down-state regions
+  thetaE_un: 0
+  betaE_un: 3
+  un_areas:
+    - 0
+    - 7
+    - 12
+
   G: None # parameter determining strength of connectivity, actual value overwritten when simulation is run 
   S: None # serotonin stimulation strength, actual value overwritten when simulation is run 
-  stim_ITI: [1, 3] # [3, 6] # stimulation inter-trial interval 
+  stim_ITI: [3, 6] # [3, 6] # stimulation inter-trial interval 
   stim_dur: 1 # in sec
-  
-  # every area should have a parameter that scales the average firing rate of the specific region
-  # like this, we can replicate real data more precisely
-  average_rate_scalerE: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] #  [2, 0, -5, 2, 0, -5, 5, 8, 10, 5, 0, 2, 4, 2] # 
-  average_rate_scalerI: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # [0, 15, 0, 8, 0, 0, 10, 0, 3, 5, 12, 2, 0, 5] # 
-  # [5, -7, 8, 2, 6, 3, 2, 8, 18, 6, -2, 1.5, 9, 8]
-  # [1.8,2.5,2,3,1,2,1.1,2.5,1,2,0.9,1,1,2.2]
+  post_stim_time: 2
 
   # time constants and noise parameter
-  tauE: 10
+  tauE: 10 
   tauI: 2
   tauAdapt: 500
   tauN: 1
@@ -45,7 +47,7 @@ Parameter:
 
 Session settings:
   # read in arguments
-  total_sim: 7 # in sec
+  total_sim: 20 # in sec
   sigmaN: 3.5
   dt: 0.2
   x0: 0

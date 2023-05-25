@@ -9,7 +9,7 @@ import yaml
 
 class SimulationSession():
 
-    def __init__(self, output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G, S, session=''):
+    def __init__(self, output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G, S, time_scale, session=''):
         # a session needs parameters and output functions 
         self.nrVars = 3 # E, I and A
         self.nrAreas = nrAreas
@@ -21,8 +21,9 @@ class SimulationSession():
         self.drn_connect_file = drn_connect_file
         self.session = '_' + str(session)
         self.settings = self.load_settings()
+        self.time_scale = time_scale
         self.init_parameters(self.settings, G, S)
-        self.stimulation_times = self.set_stimulation()
+        self.stimulation_times, self.serotonin_trajectory = self.set_stimulation()
         self.save_settings()
 
         # generating the random values for the noise 
@@ -43,7 +44,7 @@ class SimulationSession():
     def save_settings(self):
 
         # make a folder where I can save the firing rate together with the setting file adn the stimulation times
-        extra = "NewDRN_TEST_sessions"
+        extra = f"RateAdj1_sessions"
         self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
         self.output_dir = op.join(self.output_dir, self.file_addon)
 
@@ -97,6 +98,11 @@ class SimulationSession():
         self.betaE_UP = config['Parameter']['betaE_UP']
         self.Up_areas = config['Parameter']['Up_areas']
 
+        # thetaE and betaE for unclear Up/Down-state regions
+        self.thetaE_un = config['Parameter']['thetaE_un']
+        self.betaE_un = config['Parameter']['betaE_un']
+        self.un_areas = config['Parameter']['un_areas']
+
         # G, S, and stim_ITI parameters
         if G is not None:
             config['Parameter']['G'] = float(G)
@@ -109,17 +115,14 @@ class SimulationSession():
         self.S = config['Parameter']['S']
         self.stim_ITI = config['Parameter']['stim_ITI']
         self.stim_dur = config['Parameter']['stim_dur']
-
-        # parameter to scale the average firing rate of the regions individually. shape: (1 x nr_areas)
-        self.average_rate_scalerE =  np.array(config['Parameter']['average_rate_scalerE'])
-        self.average_rate_scalerI =  np.array(config['Parameter']['average_rate_scalerI'])
+        self.post_stim_time = config['Parameter']['post_stim_time']
 
         # time constants and noise parameter
-        self.tauE = config['Parameter']['tauE']
-        self.tauI = config['Parameter']['tauI']
-        self.tauAdapt = config['Parameter']['tauAdapt']
-        self.tauN = config['Parameter']['tauN']
-        self.sigmaN = config['Parameter']['sigmaN']
+        self.tauE = config['Parameter']['tauE'] * self.time_scale
+        self.tauI = config['Parameter']['tauI'] * self.time_scale
+        self.tauAdapt = config['Parameter']['tauAdapt'] * self.time_scale
+        self.tauN = config['Parameter']['tauN'] * self.time_scale
+        self.sigmaN = config['Parameter']['sigmaN'] 
 
         # session settings
         self.total_sim = config['Session settings']['total_sim']
@@ -141,6 +144,7 @@ class SimulationSession():
         total = self.total_sim * 1000
         stimulation_duration = self.stim_dur * 1000
         end = 0
+        post_stim_time = self.post_stim_time * 1000 # serotonin is only done after 2 second post-stimulation
         stimulation = True 
         stimulation_array = []
 
@@ -148,19 +152,24 @@ class SimulationSession():
             pause = np.random.randint(self.stim_ITI[0]*1000, self.stim_ITI[1]*1000)
             start = end + pause
             end = start + stimulation_duration
-            stimulation_array.append([start, end])
-            print('stim array', stimulation_array)
+            stimulation_array.append([start, (end + post_stim_time - 1)])
 
             # we need some space after the stimulation period to observe if there is a rebound up state
             if end + 4000 > total:
                 stimulation = False
                 stimulation_array.pop()
 
-        print('final stim array', stimulation_array)
+        # calculate the time trajectory of serotonin stimulation (curve describing its effect over time)  
+        start_time = 0  # Start time in seconds
+        end_time = 3  # End time in seconds
+        step_size = 0.0002  # Step size in seconds
+        time = np.arange(start_time, end_time, step_size)
+        trajectory = np.array([0, 1, 0.7, 0.5, 0.45, 0.3, 0])
+        # interpolate the trajectory values at the specified time points
+        interpolated_trajectory = np.interp(time, np.linspace(start_time, end_time, len(trajectory)), trajectory)
 
-        print(np.array(stimulation_array))
         
-        return np.array(stimulation_array)
+        return np.array(stimulation_array), interpolated_trajectory
 
 
     def start_sim(self):
@@ -206,14 +215,20 @@ class SimulationSession():
         # figure 5 of the Jercog (2017) paper 
         thetaE_thresh = self.Edesp - self.thetaE
         thetaE_Up_thresh = self.Edesp - self.thetaE_UP
+        thetaE_un_thresh = self.Edesp - self.thetaE_un
 
         self.thetaE_array = np.empty(self.nrAreas)
         self.thetaE_array.fill(thetaE_thresh)
         self.betaE_array = np.empty(self.nrAreas)
         self.betaE_array.fill(self.betaE)
 
+        # for areas with UP-states
         self.thetaE_array[self.Up_areas] = thetaE_Up_thresh
         self.betaE_array[self.Up_areas] = self.betaE_UP
+
+        # for areas with unclear UP/DOWN states
+        self.thetaE_array[self.un_areas] = thetaE_un_thresh
+        self.betaE_array[self.un_areas] = self.betaE_un
 
 
     def derivatives(self, y, n):
@@ -229,21 +244,21 @@ class SimulationSession():
         # derivative of E - rate
         # aux is a dummy variable for part of the derivative
         #print(self.I)
-        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array + n[0] - y[2] + self.G * np.matmul(self.c_matrix, y[0]) - self.I #+ self.average_rate_scalerE
+        aux = self.Jee*y[0] - self.Jei*y[1] + self.thetaE_array + n[0] - y[2] + self.G * np.matmul(self.c_matrix, y[0]) - self.I
 
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Edesp:
                 dy[0][area] = -y[0][area]/self.tauE
             else:
-                dy[0][area] = (-y[0][area] + self.Eslope*(aux[area]-self.Edesp))/self.tauE
+                dy[0][area] = (-y[0][area] + ((aux[area]-self.Edesp)*self.Eslope[area]))/self.tauE
             
         # derivative of I - rate 
-        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] + self.average_rate_scalerI #+ self.I 
+        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] 
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Idesp:
                 dy[1][area] = -y[1][area]/self.tauI
             else:
-                dy[1][area] = (-y[1][area]+self.Islope*(aux[area]-self.Idesp))/self.tauI
+                dy[1][area] = (-y[1][area] + self.Islope[area]*(aux[area]-self.Idesp))/self.tauI
 
         # derivative of A - adaptation rate
         dy[2] = (-y[2]+self.betaE_array*y[0])/self.tauAdapt
@@ -276,6 +291,10 @@ class SimulationSession():
         # intitial serotonin stimulation is 0
         self.I = 0
 
+        # stimulation time countdown (to index the correct stimulation value over time)
+        
+        stim_countdown = 0 #  np.arange(int((self.stim_dur+self.post_stim_time)*1000/self.dt))
+
         # for every time step, we now have to find the solution of the derivative by integrating 
         for iter, step in enumerate(tsteps):
 
@@ -300,12 +319,14 @@ class SimulationSession():
             noise_current[1] = noise_current[1] * noiseDummy1+noiseDummy2*self.random_vals[1,iter,:]
             
             # START of serotonin stimulation   
-            if round(step, 1) in self.stimulation_times[:,0]:
-                self.I = np.squeeze(self.drn_connect * self.S)
+            if (round(step, 1) in self.stimulation_times[:,0]) or (stim_countdown > 0):
+                self.I = np.squeeze(self.drn_connect * self.S * self.serotonin_trajectory[stim_countdown])
+                stim_countdown += 1 
 
             # END of serotonin stimulation
             if round(step, 1) in self.stimulation_times[:,1]:
                 self.I = 0
+                stim_countdown = 0
 
             k+= 1
             if k == Tdt:
