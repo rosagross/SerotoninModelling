@@ -1,8 +1,6 @@
 import os
 import os.path as op
 import numpy as np 
-import matplotlib.pyplot as plt
-import math
 from datetime import datetime
 import pandas as pd
 import yaml
@@ -72,8 +70,8 @@ class SimulationSession():
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         outname = self.file_addon + self.session + '_stimulation_times.csv'
-        stim_times = pd.DataFrame(self.stimulation_times)
-        stim_times.to_csv(os.path.join(outdir, outname), index=False)
+        stim_times = pd.DataFrame()
+        self.stimulation_times.to_csv(os.path.join(outdir, outname), index=False)
 
     
     def init_parameters(self, config, G, S):
@@ -253,7 +251,7 @@ class SimulationSession():
                 dy[0][area] = (-y[0][area] + ((aux[area]-self.Edesp)*self.Eslope[area]))/self.tauE
             
         # derivative of I - rate 
-        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] 
+        aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] # - self.I
         for area in np.arange(self.nrAreas):
             if aux[area] <= self.Idesp:
                 dy[1][area] = -y[1][area]/self.tauI
