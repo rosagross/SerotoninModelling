@@ -138,7 +138,7 @@ axs.set_xticklabels(labels=[0,1,2,3])
 axs.set_xlabel('Coupling strength (G)')
 axs.set_ylabel('Synchrony (X)')
 sns.despine(trim=True)
-plt.savefig(os.path.join(figure_dir, f'network_synchrony_brunelX.pdf'), dpi=600)
+plt.savefig(os.path.join(figure_dir, f'network_synchrony_brunelX.pdf'), dpi=600, bbox_inches="tight")
 # %% Plot 
 
 
