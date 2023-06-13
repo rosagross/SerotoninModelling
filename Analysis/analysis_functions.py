@@ -207,11 +207,9 @@ def compute_brunel(output_dir, file_name):
     
     # compute the variance of the population averaged activity
     network_rate_mean_pertime = np.mean(ratesI, axis=1)
-    network_rate_mean_perregion = np.mean(ratesI, axis=0)
 
     # this is the same as np.var(network_rate_mean_pertime)
     network_variance = np.mean((network_rate_mean_pertime)**2) - np.mean(network_rate_mean_pertime)**2
-    #print('network variance:', network_variance)
 
     # calculate the variance of each area individually 
     # the individual variance is completely independent of the other region's variance 
@@ -220,10 +218,7 @@ def compute_brunel(output_dir, file_name):
     # X parameter
     # if the average individual variance is similar to the overall regions variance 
     mean_individual_var = np.mean(individual_variance)
-    #print('average of individual variance:', mean_individual_var)
-
     brunel_x = np.sqrt(network_variance/mean_individual_var)
-    #print('synchrony:', brunel_x)
     
     return pd.DataFrame(data={'brunel_X' : brunel_x, 'G' : G, 'S' : S, 'session' : session}, index=[0])
     
