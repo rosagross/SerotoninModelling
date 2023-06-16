@@ -45,7 +45,7 @@ example_rates = example_rates[:,start:stop,:]
 states_data = pd.read_csv(os.path.join(frate_dir, file_dir, file_name+'_states.csv'), index_col=0)
 
 # choose area to plot 
-region = 2
+region = 12
 region_UP = 3
 
 # load atlas with releveant regions for plotting
