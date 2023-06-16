@@ -19,7 +19,7 @@ Replication of UP and DOWN state dynamic
 
 # set directories
 frate_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), os.pardir, os.pardir, os.pardir, os.pardir, 'ModelData', 'data', 'firing_rates'))
-figure_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), os.pardir, os.pardir, os.pardir, os.pardir, os.pardir, 'Writing', 'Figures', 'Results'))
+figure_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), os.pardir, os.pardir, os.pardir, os.pardir, os.pardir, 'Writing', 'Figures', 'Results', 'Figure1'))
 atlas_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), os.pardir, os.pardir, 'atlas_data'))
 analysed_data_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), os.pardir, os.pardir, os.pardir, os.pardir, 'ModelData', 'analysed_data'))
 
@@ -33,8 +33,8 @@ cmap = gradient_cmap(colors)
 # load data 
 file_dir = "14areas_G2.0_S0.0_thetaE-1_beta6RateAdj1_sessions"
 file_name = "14areas_G2.0_S0.0_thetaE-1_beta6RateAdj1_sessions_0"
-start = 0
-stop = 10*1000
+start = 0*1000
+stop = 8*1000
 frate_E_sync = pd.read_csv(os.path.join(frate_dir, file_dir, f'frateE_{file_name}.csv'))
 frate_I_sync = pd.read_csv(os.path.join(frate_dir, file_dir, f'frateI_{file_name}.csv'))
 frate_A_sync = pd.read_csv(os.path.join(frate_dir, file_dir, f'frateA_{file_name}.csv')) 
@@ -52,6 +52,9 @@ region_UP = 3
 atlas = pd.read_csv(os.path.join(atlas_dir, 'relevant_areas.csv'))
 atlas.drop(['Unnamed: 0'], inplace=True, axis=1)
 atlas = np.array(atlas)
+updown_regions = ['Amyg', 'mPFC', 'OLF', 'OFC', 'Pir', 'RSC', 'M2', 'Str', 'Thal', 'Vis']
+up_regions = ['Hipp', 'MRN', 'PAG', 'SC']
+all_regions = ['Amyg', 'Hipp', 'mPFC', 'MRN', 'OLF', 'OFC', 'PAG', 'Pir', 'RSP', 'M2', 'SC', 'Str', 'Thal', 'Vis']
 
 # %% plot one area
 
@@ -112,9 +115,7 @@ plt.savefig(os.path.join(figure_dir, f'UPDOWN_{atlas[region][0]}-{atlas[region_U
 
 
 # %% Load heterogeneity data
-updown_regions = ['Amyg', 'mPFC', 'OLF', 'OFC', 'Pir', 'RSC', 'M2', 'Str', 'Thal', 'Vis']
-up_regions = ['Hipp', 'MRN', 'PAG', 'SC']
-all_regions = ['Amyg', 'Hipp', 'mPFC', 'MRN', 'OLF', 'OFC', 'PAG', 'Pir', 'RSC', 'M2', 'SC', 'Str', 'Thal', 'Vis']
+
 state_data = pd.read_csv(os.path.join(analysed_data_dir, 'totalduration_state_analysis_S0_G2RateAdj1.csv'))
 up_areas = ['Midbrain reticular nucleus', 'Hippocampus', 'Superior colliculus', 'Periaqueductal gray']
 updown_df = state_data[~state_data['region'].isin(up_areas)]
@@ -139,6 +140,30 @@ axs.set_xlabel('Coupling strength (G)')
 axs.set_ylabel('Synchrony (X)')
 sns.despine(trim=True)
 plt.savefig(os.path.join(figure_dir, f'network_synchrony_brunelX.pdf'), dpi=600, bbox_inches="tight")
-# %% Plot 
 
 
+# %% Plot all traces
+
+colors, dpi = figure_style()
+fig, axes = plt.subplots(2, 7, sharex=True, sharey=False, figsize=(7,2))
+
+for i, ax in enumerate(axes.flatten()):
+    
+    ax.plot(example_rates[1,start:stop,i], label='I', color='#ff7f0e')
+    ax.plot(example_rates[0,start:stop,i], label='E', color='#1f77b4')
+    ax.set_title(all_regions[i], pad=0.5)
+    ax.get_xaxis().set_visible(False)
+    #ax.legend()
+    ax.tick_params(axis='y', which='major', pad=0)
+
+axes[1][0].plot([0*1000, 5*1000], [-3, -3], color='k', lw=0.8, clip_on=False)
+axes[1][0].text(2.5*1000, -5, '5s', ha='center', va='top')
+sns.despine(trim=True, bottom=True)
+print(start, stop)
+fig.text(0.08, 0.5, "firing rate (spike/s)", va='center', rotation='vertical')
+plt.subplots_adjust(wspace=0.33, hspace=0.2)
+
+plt.savefig(os.path.join(figure_dir, f'network_UP-DOWN_states_S0_G2.pdf'), dpi=600, bbox_inches="tight")
+
+
+# %%
