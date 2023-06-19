@@ -35,15 +35,11 @@ serotonin_analysis = pd.DataFrame()
 # load data for all sessions 
 for G in G_params:
     print('G:', G)
+    print('S:', S)
     for session in all_sessions:
 
-        # get session folder name
-        session_name = f'14areas_G{float(G)}_S{float(S)}_thetaE{thetaE}_beta{beta}{extra}_sessions'
-        file_dir = os.path.join(output_dir, session_name)
-        file_name = f'14areas_G{float(G)}_S{float(S)}_thetaE{thetaE}_beta{beta}{extra}_sessions_{session}'
-
         # compute down state probability 
-        data_df = compute_transitions([G], [S], extra=extra, window_length=window_duration, pre_stim=pre_stim)
+        data_df = compute_transitions(output_dir, [G], [S], extra=extra, window_length=window_duration, pre_stim=pre_stim)
         serotonin_analysis = pd.concat((serotonin_analysis, data_df))
 
 serotonin_analysis.to_csv(os.path.join(analysed_data_dir, f'serotonin_analysis_all_regions_S{S}_G{G_params}_{extra}.csv'), index=False)
@@ -75,7 +71,7 @@ data_grouped_bins.to_csv(os.path.join(analysed_data_dir, f'state_analysis_bins_S
 # run state analysis for all different option of serotonin targets (targeting either E or I population 
 # with an inhibitory or excitatory current)
 
-S = 0
+S = 40
 G = [2]
 
 serotonin_analysis = pd.read_csv(os.path.join(analysed_data_dir, f'serotonin_analysis_all_regions_S{S}_G{G}_RateAdj1.csv'))
@@ -119,7 +115,7 @@ all_targets_df.to_csv(os.path.join(analysed_data_dir, f'serotonin_targets_state_
 G_parameters = [2]
 S = 0
 brunel_X_df = pd.DataFrame()
-extra = 'RateAdj1_C'
+extra = 'RateAdj1'
 thetaE = -1
 beta = 6
 sessions = np.arange(0, 10, 1)

@@ -7,11 +7,9 @@ import ssm
 import yaml
 import re
 
-# set directories
-output_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), 'data', 'firing_rates'))
+# set directories for the atlas and connectivity data 
 atlas_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), 'Analysis', 'atlas_data'))
 model_dir = os.path.abspath(os.path.dirname(os.getcwd()))
-
 
 
 def load_firing_rates(output_dir, file_name):
@@ -223,7 +221,7 @@ def compute_brunel(output_dir, file_name):
     return pd.DataFrame(data={'brunel_X' : brunel_x, 'G' : G, 'S' : S, 'session' : session}, index=[0])
     
 
-def compute_transitions(G_params, S_params, regions='all', window_length=4000, pre_stim=1000, sessions=range(10), thetaE=-1, beta=6, extra=''):
+def compute_transitions(output_dir, G_params, S_params, regions='all', window_length=4000, pre_stim=1000, sessions=range(10), thetaE=-1, beta=6, extra=''):
     ''' 
     For each window of serotonin stimulation, calculate the downstate probability and state change probablility.
     G_params: list of G parameter 
@@ -246,7 +244,6 @@ def compute_transitions(G_params, S_params, regions='all', window_length=4000, p
 
     for S in S_params:
         for G in G_params:
-            p_state_change_all = []
            
             session_name = f'14areas_G{float(G)}_S{float(S)}_thetaE{thetaE}_beta{beta}{extra}_sessions' 
             for session in sessions:

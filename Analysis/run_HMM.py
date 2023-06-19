@@ -12,7 +12,6 @@ S_params = [0, 40]
 beta = 6
 thetaE = -1
 session_params = pd.DataFrame()
-brunel_X_df = pd.DataFrame()
 extra = "RateAdj1_C_sessions"
 filename_out = ''
 sessions = np.arange(0,10,1)

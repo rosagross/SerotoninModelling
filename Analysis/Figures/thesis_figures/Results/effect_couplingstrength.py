@@ -25,7 +25,7 @@ connect_matrix.drop('Unnamed: 0', inplace=True, axis=1)
 connect_matrix = np.array(connect_matrix)
 
 # compute the delta downstate probability
-baseline_df['p_down_mean'] = baseline_df.groupby(['region_name', 'G'])['p_down'].transform('mean')
+baseline_df['p_down_mean'] = baseline_df.groupby(['region_name', 'G', 'session'])['p_down'].transform('mean')
 baseline_df['p_down_delta'] = baseline_df['p_down'] - baseline_df['p_down_mean']
 serotonin_df['p_down_delta'] = (serotonin_df['p_down'].values - baseline_df['p_down_mean'].values - baseline_df['p_down_delta'].values)
 
