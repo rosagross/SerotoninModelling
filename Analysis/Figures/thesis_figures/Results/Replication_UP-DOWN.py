@@ -56,7 +56,7 @@ updown_regions = ['Amyg', 'mPFC', 'OLF', 'OFC', 'Pir', 'RSC', 'M2', 'Str', 'Thal
 up_regions = ['Hipp', 'MRN', 'PAG', 'SC']
 all_regions = ['Amyg', 'Hipp', 'mPFC', 'MRN', 'OLF', 'OFC', 'PAG', 'Pir', 'RSP', 'M2', 'SC', 'Str', 'Thal', 'Vis']
 
-# %% plot one area
+# %% plot one area UP-DOWN & one UP area
 
 colors, dpi = figure_style()
 f, axs = plt.subplots(1, 2, figsize=(3, 1.75), dpi=dpi, sharey=True)

@@ -116,10 +116,10 @@ all_targets_df.to_csv(os.path.join(analysed_data_dir, f'serotonin_targets_state_
 # %% Run synchrony analysis     
 
 # calculate the states and synchrony quantification (brunel X parameter) for many different G values 
-G_parameters = [0,1,2,3]
+G_parameters = [2]
 S = 0
 brunel_X_df = pd.DataFrame()
-extra = 'RateAdj1'
+extra = 'RateAdj1_C'
 thetaE = -1
 beta = 6
 sessions = np.arange(0, 10, 1)

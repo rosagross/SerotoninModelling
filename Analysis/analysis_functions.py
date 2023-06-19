@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import os 
 import matplotlib.pyplot as plt
-#import ssm 
+import ssm 
 import yaml
 import re
 
@@ -299,3 +299,5 @@ def compute_transitions(G_params, S_params, regions='all', window_length=4000, p
     return state_all_windows 
 
 
+
+# %%

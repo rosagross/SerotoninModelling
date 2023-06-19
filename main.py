@@ -2,7 +2,6 @@ import numpy as np
 import sys
 from datetime import datetime
 import os
-from parameter import Parameter
 from simulation_functions import SimulationSession
 
 
@@ -21,7 +20,7 @@ def main():
     # serotonin stimulation strength 
     S_parameters =  [40, 0] 
     # coupling strength G
-    G_parameters = np.arange(0, 4, 1)
+    G_parameters = [2] #np.arange(0, 4, 1)
     # scaling the tau parameters (to reach desired frequency of UP-DOWN dynamics)
     time_param = 3 
 

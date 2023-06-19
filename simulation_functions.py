@@ -1,5 +1,6 @@
 import os
 import os.path as op
+import math
 import numpy as np 
 from datetime import datetime
 import pandas as pd
@@ -42,7 +43,7 @@ class SimulationSession():
     def save_settings(self):
 
         # make a folder where I can save the firing rate together with the setting file adn the stimulation times
-        extra = f"RateAdj1_sessions"
+        extra = f"RateAdj1_C_sessions"
         self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
         self.output_dir = op.join(self.output_dir, self.file_addon)
 
@@ -70,8 +71,8 @@ class SimulationSession():
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         outname = self.file_addon + self.session + '_stimulation_times.csv'
-        stim_times = pd.DataFrame()
-        self.stimulation_times.to_csv(os.path.join(outdir, outname), index=False)
+        stim_times = pd.DataFrame(self.stimulation_times)
+        stim_times.to_csv(os.path.join(outdir, outname), index=False)
 
     
     def init_parameters(self, config, G, S):
@@ -190,10 +191,11 @@ class SimulationSession():
         # connectivity matrix for the 14 regions
         self.c_matrix = pd.read_csv(self.filename_connectivity)
         self.c_matrix.drop('Unnamed: 0', inplace=True, axis=1)
-        self.c_matrix = np.array(self.c_matrix)
+        #self.c_matrix = np.array(self.c_matrix)
+        mean_connect = np.mean(self.c_matrix.to_numpy().flatten())
 
         # uncomment this if you want a uniform connectivity matrix
-        #self.c_matrix = np.ones((self.nrAreas,self.nrAreas))*0.1
+        self.c_matrix = np.ones((self.nrAreas,self.nrAreas))*mean_connect
 
         np.fill_diagonal(self.c_matrix, 0)
 
