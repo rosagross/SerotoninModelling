@@ -164,6 +164,3 @@ fig.text(0.08, 0.5, "firing rate (spike/s)", va='center', rotation='vertical')
 plt.subplots_adjust(wspace=0.33, hspace=0.2)
 
 plt.savefig(os.path.join(figure_dir, f'network_UP-DOWN_states_S0_G2.pdf'), dpi=600, bbox_inches="tight")
-
-
-# %%

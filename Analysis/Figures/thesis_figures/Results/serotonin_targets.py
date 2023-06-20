@@ -70,13 +70,18 @@ for i, ax in enumerate(axs.flatten()):
     sns.lineplot(data=stimulation, x='time', y='p_down_delta',
                     color=colors['stim'], errorbar='se', err_kws={'lw': 0}, ax=ax, label='Stimulation')
     sns.lineplot(data=no_stimulation, x='time', y='p_down_delta', err_kws={'lw': 0},
-                    color=colors['no-stim'], errorbar='se', ax=ax, label='No stimulation')
-    ax.set(ylim=[-0.265, 0.3], yticks=[-0.25, 0, 0.3], yticklabels=[-25, 0, 30])
+                    color=colors['no-stim'], errorbar='se', ax=ax, label='No stim.')
+    ax.set(ylim=[-0.265, 0.3], yticks=[-0.25, 0, 0.3], yticklabels=[-25, 0, 30], xlim=[-0.8, 4])
     ax.set_title(all_acronyms[i])
     ax.set_ylabel('', labelpad=0)
     ax.get_xaxis().set_visible(False)
     sns.despine(trim=True, bottom=True, ax=ax)
-    ax.legend('')
+    
+    if not i == 6:
+        ax.legend('')
+    else:
+        ax.legend(title=None, loc='upper right', bbox_to_anchor=(1., 1.07))
+
 
     if not ((i==0) or (i==7)):
         ax.get_yaxis().set_visible(False)
@@ -85,7 +90,7 @@ for i, ax in enumerate(axs.flatten()):
 axs[1][0].plot([0, 2], [-0.26, -0.26], color='k', lw=0.8, clip_on=False)
 axs[1][0].text(1, -0.28, '2s', ha='center', va='top')
 fig.text(0.08, 0.5, u'Δ down state probability (%)', va='center', rotation='vertical')
-plt.subplots_adjust(hspace=0.4)
+plt.subplots_adjust(hspace=0.4, wspace=0.)
 plt.savefig(os.path.join(figure_dir, f'I+_trajectories_G{G}_S{S}.pdf'), bbox_inches="tight")
 
 # %% group regions
@@ -107,9 +112,10 @@ E_df = E_df.groupby(['combined_region', 'S', 'session', 'G', 'time'], as_index=F
 regions_plot = ['Frontal cortex', 'Amygdala', 'Tail of the striatum', 'Sensory cortex', 
            'Hippocampus', 'Thalamus','Midbrain']
 
-# %%
+# %% Plot 2) difference between E- and I+ in example regions
+
 colors, dpi = figure_style()
-fig, axs = plt.subplots(1, len(regions_plot), sharex=True, sharey=False, figsize=(3.5,1.75))
+fig, axs = plt.subplots(1, len(regions_plot), sharex=True, sharey=False, figsize=(8,1.5))
 
 for i, ax in enumerate(axs):
     ax.axvspan(0, 1, alpha=0.25, color='royalblue', lw=0)
@@ -117,6 +123,7 @@ for i, ax in enumerate(axs):
 
     stimulation_I = I_df[I_df['combined_region']==regions_plot[i]][['p_down_delta', 'time']].reset_index()
     stimulation_E = E_df[E_df['combined_region']==regions_plot[i]][['p_down_delta', 'time']].reset_index()
+    stimulation_diff = pd.DataFrame()
     stimulation_diff['p_down_delta'] = stimulation_E['p_down_delta'] - stimulation_I['p_down_delta']
     stimulation_diff['time'] = stimulation_E['time']
 
@@ -135,12 +142,12 @@ for i, ax in enumerate(axs):
 
 axs[0].plot([0, 2], [-0.5, -0.5], color='k', lw=0.8, clip_on=False)
 axs[0].text(1, -0.55, '2s', ha='center', va='top')
-fig.text(0.03, 0.5, u'E- vs. I+ Δ down state prob. (%)', va='center', rotation='vertical')
+fig.text(0.075, 0.5, u'E- vs. I+ Δ down state prob. (%)', va='center', rotation='vertical')
 plt.savefig(os.path.join(figure_dir, f'difference_E-vsI+_G{G}_S{S}.pdf'), bbox_inches="tight")
 plt.subplots_adjust(hspace=0.4)
 
 
-# %% Plot 2)
+# %% Plot 3)
 
 colors, dpi = figure_style()
 fig, ax = plt.subplots(1, 1, figsize=(1.7, 1.75), dpi=dpi)
@@ -162,7 +169,7 @@ sns.despine(trim=True, bottom=True)
 plt.savefig(os.path.join(figure_dir, f'trajectory_serotonin_targets_G{G}_S{S}.pdf'), bbox_inches="tight")
 plt.show()
 
-# %% Plot 3)
+# %% Plot 4)
 
 colors, dpi = figure_style()
 f, axs = plt.subplots(1, 1, figsize=(2, 1.75), dpi=dpi, sharey=True)
@@ -187,3 +194,38 @@ axs.set_title(atlas[region][0])
 plt.savefig(os.path.join(figure_dir, f'example_I-target_G{G}_S{S}.pdf'), bbox_inches="tight")
 plt.show()
 
+# %% Plot 5) barplot of other regions showing I-
+targets_df_grouped = targets_df
+targets_df_grouped['combined_region'] = targets_df['region_name']
+targets_df_grouped['combined_region'].iloc[np.where(targets_df['region_name'].isin(frontal))] = 'Frontal cortex' 
+targets_df_grouped['combined_region'].iloc[np.where(targets_df['region_name'].isin(sensory))] = 'Sensory cortex' 
+targets_df_grouped['combined_region'].iloc[np.where(targets_df['region_name'].isin(midbrain))] = 'Midbrain' 
+targets_df_grouped = targets_df_grouped.groupby(['combined_region', 'S', 'session', 'G', 'time', 'target_name'], as_index=False).mean()
+
+serotonin_window = [0.5,1]
+region_labels = ['Frontal', 'Amyg',  'Str', 'Sens', 'Hipp', 'Thal','Mid']
+I_inhib_df = targets_df_grouped[targets_df_grouped['target_name']=='I-']
+I_inhib_df = I_inhib_df[I_inhib_df['time'].between(serotonin_window[0],serotonin_window[1])]
+I_inhib_df = I_inhib_df[I_inhib_df['combined_region'].isin(regions_plot)]
+
+colors, dpi = figure_style()
+f, axs = plt.subplots(1, 1, figsize=(2, 1.75), dpi=dpi, sharey=True)
+
+sns.barplot(data=I_inhib_df, y='p_down_delta', x='combined_region',
+            ax=axs, order=regions_plot, errorbar='se', 
+            color='grey', clip_on=False)
+
+axs.set_xticklabels(region_labels, rotation=-45, ha='left')
+axs.set_title('Excitatory stimulation of I')
+axs.set_xlabel('')
+axs.set_ylabel(u'Δ down state probability (%)')
+
+sns.despine(trim=True, ax=axs)
+plt.subplots_adjust(left=0.08, bottom=0.15, right=1, top=0.85, wspace=0, hspace=0.4)
+plt.tight_layout(h_pad=-10, w_pad=0)
+plt.savefig(os.path.join(figure_dir, f'paradoxical_effect_S{S}_G{G}.pdf'), dpi=600)
+
+
+
+
+# %%

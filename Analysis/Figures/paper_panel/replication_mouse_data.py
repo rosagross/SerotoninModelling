@@ -71,8 +71,6 @@ regions = ['Amygdala',  'Tail of the striatum', 'Sensory cortex',
            'Hippocampus', 'Thalamus','Midbrain']
 region_labels = ['Amyg',  'Str', 'Sens', 
            'Hipp', 'Thal','Mid']
-PROPS = {'boxprops':{'facecolor':'none', 'edgecolor':'none'}, 'medianprops':{'color':'none'},
-         'whiskerprops':{'color':'none'}, 'capprops':{'color':'none'}}
 stimulation_window_df = serotonin_df[serotonin_df['time'].between(serotonin_window[0],serotonin_window[1])]
 stimulation_window_df = stimulation_window_df.groupby(['combined_region', 'session'], as_index=False).mean()
 
