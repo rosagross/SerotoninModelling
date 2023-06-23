@@ -175,7 +175,7 @@ def get_all_states(output_dir, file_name, save_states=True):
     frate_A_sync = pd.read_csv(os.path.join(output_dir, f'frateA_{file_name}.csv')) 
 
     ratesG = np.array((frate_E_sync, frate_I_sync, frate_A_sync))
-
+    
     for i in range(ratesG.shape[2]):
 
         zhat, p_down = calc_HMM_states(ratesG[1, :, i])
