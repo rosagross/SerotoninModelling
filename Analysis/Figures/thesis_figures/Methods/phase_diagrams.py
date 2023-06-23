@@ -51,16 +51,16 @@ plt.show()
 # x axes: values of thetaE
 # y axes: value for beta
 
-#thetaEvsbeta.loc[thetaEvsbeta['rate']>15, 'rate'] = np.NaN
+thetaEvsbeta.loc[thetaEvsbeta['state_frequency']>15, 'state_frequency'] = np.NaN
 thetaEvsbeta = thetaEvsbeta[thetaEvsbeta['betaE']>0] 
-matrix_thetaEvsbeta = thetaEvsbeta.pivot(index='betaE', columns='thetaE', values='rateI')
+matrix_thetaEvsbeta = thetaEvsbeta.pivot(index='betaE', columns='thetaE', values='state_frequency')
 
 colors, dpi = figure_style()
-f, axs = plt.subplots(1, 1, figsize=(3, 1.75))
+f, axs = plt.subplots(1, 1, figsize=(4, 1.75))
 sns.heatmap(matrix_thetaEvsbeta, cmap='turbo', square=True, rasterized=True, ax=axs) #, norm=LogNorm(), cbar_kws={'ticks':MaxNLocator(2), 'format':'%.e'})
 axs.invert_yaxis()
 plt.ylabel('Adaptation strength (beta)')
 plt.xlabel('E threshold (thetaE)')
-plt.title('Firing rate population I')
+plt.title('State frequency (%)')
 plt.savefig(os.path.join(figure_dir , "phase_diagram_thetaEvsbeta_firingrateI.pdf"), bbox_inches="tight")
 plt.show()

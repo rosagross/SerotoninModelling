@@ -207,7 +207,61 @@ for thetaE in thetaE_params:
                 state_statistics_local = pd.concat((state_statistics_local, pd.DataFrame(data={'state_frequency': f_s, 'd_down': d_down,
                                                                                 'd_up' : d_up, 'p_down' : prop_zero, 'betaE' : beta,
                                                                                 'p_up' : prop_one, 'thetaE' : thetaE, 'gE':gE, 'gI':gI,
-                                                                                'rateI' : rateI, 'rateE' : rateE}, index=[0])))
+                                                                                'rateI' : rateI, 'rateE' : rateE, 'time_constant' : time_scale}, index=[0])))
 
-state_statistics_local.to_csv(os.path.join(analysed_data_dir, f'state_statistics_local_gI4_gE1.csv'))
+state_statistics_local.to_csv(os.path.join(analysed_data_dir, f'state_statistics_local_thetaE-{thetaE}_betaE-{beta}_gI{gI}_gE{gE}.csv'))
 
+# %% run state analysis for different time constants
+
+thetaE = -1
+beta = 6
+gI = 4
+gE = 1
+
+time_scale_params = [1,2,3,4]
+state_statistics_time_scales = pd.DataFrame()
+
+for time_scale in time_scale_params:
+                
+    file_name = f'y_L-1_thetaE-{thetaE}_betaE-{beta}_gI{gI}_gE{gE}_timescale{time_scale}'
+    f_rates = pd.read_csv(os.path.join(output_dir_local, f'{file_name}.csv'))
+    f_rates = np.array(f_rates)
+    states = pd.read_csv(os.path.join(output_dir_local, f'{file_name}_states.csv'))
+    
+    # cast the state time series to list
+    time_series = list(states['state'])
+    trial_duration = len(time_series)
+    
+    num_zeros = time_series.count(0)
+    num_ones = time_series.count(1)
+
+    # calculate the duration of each state (in number of time steps)
+    zero_durations = [sum(1 for _ in group) for key, group in itertools.groupby(time_series) if key == 0]
+    one_durations = [sum(1 for _ in group) for key, group in itertools.groupby(time_series) if key == 1]
+
+    # calculate the frequency of the states (I use the up-state here) 
+    f_s = (len(one_durations)/trial_duration)*1000
+
+    # calculate the average state durations 
+    d_down = np.mean(zero_durations)
+    d_up = np.mean(one_durations)
+
+    # calculate the total duration of each state (in number of time steps)
+    total_zero_duration = sum(zero_durations)
+    total_one_duration = sum(one_durations)
+
+    # calculate the proportion of time spent in each state
+    prop_zero = total_zero_duration / len(time_series)
+    prop_one = total_one_duration / len(time_series)
+    
+    # calculate the mean firing rate for E and I 
+    rateE = np.mean(f_rates[0])
+    rateI = np.mean(f_rates[1])
+
+    # collect the values in the dataframe 
+    state_statistics_time_scales = pd.concat((state_statistics_time_scales, pd.DataFrame(data={'state_frequency': f_s, 'd_down': d_down,
+                                                                    'd_up' : d_up, 'p_down' : prop_zero, 'betaE' : beta,
+                                                                    'p_up' : prop_one, 'thetaE' : thetaE, 'gE':gE, 'gI':gI,
+                                                                    'rateI' : rateI, 'rateE' : rateE, 'time_constant' : time_scale}, index=[0])))
+
+state_statistics_time_scales.to_csv(os.path.join(analysed_data_dir, f'state_statistics_local_thetaE-1_beta6_timescales.csv'))
