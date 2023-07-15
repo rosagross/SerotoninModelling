@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import ssm 
 import yaml
 import re
+from scipy.ndimage import gaussian_filter
 
 # set directories for the atlas and connectivity data 
 atlas_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), 'Analysis', 'atlas_data'))
@@ -175,7 +176,7 @@ def get_all_states(output_dir, file_name, save_states=True):
     frate_A_sync = pd.read_csv(os.path.join(output_dir, f'frateA_{file_name}.csv')) 
 
     ratesG = np.array((frate_E_sync, frate_I_sync, frate_A_sync))
-    
+
     for i in range(ratesG.shape[2]):
 
         zhat, p_down = calc_HMM_states(ratesG[1, :, i])
@@ -256,7 +257,6 @@ def compute_transitions(output_dir, G_params, S_params, regions='all', window_le
                     states_region = states[states['region']==region]
                     # get the time window around the stimulation 
                     times_array = pd.read_csv(os.path.join(file_dir, file_name+'_stimulation_times.csv')).to_numpy()
-
                     # first check if all time windows are big enough 
                     # (e.g., sometimes the last simulation is too close to the end of the trial)
                     windows = []
@@ -271,16 +271,17 @@ def compute_transitions(output_dir, G_params, S_params, regions='all', window_le
 
                         # the state changes
                         zhat = state_window['state']
-                        state_change_up = np.concatenate((np.diff(zhat) > 0, [False])).astype(int)
-                        state_change_down = np.concatenate((np.diff(zhat) < 0, [False])).astype(int)
+                        state_change_up = np.concatenate((np.diff(zhat) == 1, [False])).astype(int)
+                        state_change_down = np.concatenate((np.diff(zhat) == -1, [False])).astype(int)
+                        p_down_state_change = gaussian_filter(np.mean(state_change_down, axis=0), 1)
+                        p_up_state_change = gaussian_filter(np.mean(state_change_up, axis=0), 1)
 
                         state_all_windows = pd.concat((state_all_windows, pd.DataFrame(data={'session': session, 'window': i, 'p_down':state_window['p_down'],
-                                                                                 'p_state_change_up': state_change_up, 'p_state_change_down': state_change_down,
+                                                                                 'p_state_change_up': p_up_state_change, 'p_state_change_down': p_down_state_change,
                                                                                  'time':times, 'state':zhat,
                                                                                  'region':region, 'abr_region': acronyms[region],
                                                                                  'G' : G, 'S' : S})))
                     
-            
     # add the names of the regions to the dataset
     # for this load the atlas with releveant regions for plotting
     atlas = pd.read_csv(os.path.join(atlas_dir, 'relevant_areas.csv'))

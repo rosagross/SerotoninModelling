@@ -164,3 +164,29 @@ fig.text(0.08, 0.5, "firing rate (spike/s)", va='center', rotation='vertical')
 plt.subplots_adjust(wspace=0.33, hspace=0.2)
 
 plt.savefig(os.path.join(figure_dir, f'network_UP-DOWN_states_S0_G2.pdf'), dpi=600, bbox_inches="tight")
+
+
+# %% serotonin trajectory
+
+start_time = 0  # Start time in seconds
+end_time = 3  # End time in seconds
+step_size = 0.0002  # Step size in seconds
+time = np.arange(start_time, end_time, step_size)
+trajectory = np.array([0, 1, 0.7, 0.5, 0.45, 0.3, 0])
+x_labels = np.linspace(start_time, end_time, len(trajectory))
+print(x_labels)
+# interpolate the trajectory values at the specified time points
+interpolated_trajectory = np.interp(time, np.linspace(start_time, end_time, len(trajectory)), trajectory)
+
+colors, dpi = figure_style()
+f, axs = plt.subplots(1, 1, figsize=(2, 1.75), dpi=dpi)
+axs.plot(interpolated_trajectory)
+axs.set_xticks([0, 2500, 5000, 7500, 10000, 12500, 15000])
+axs.set_xticklabels(x_labels)
+sns.despine(trim=True)
+axs.set_xlabel('Time (s)')
+axs.set_ylabel('Serotonin release')
+
+
+plt.savefig(os.path.join(figure_dir, f'serotonin_trajectory.pdf'), dpi=600, bbox_inches="tight")
+

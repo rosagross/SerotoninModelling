@@ -42,8 +42,8 @@ class SimulationSession():
 
     def save_settings(self):
 
-        # make a folder where I can save the firing rate together with the setting file adn the stimulation times
-        extra = f"RateAdj1_C_sessions"
+        # make a folder where I can save the firing rate together with the setting file and the stimulation times
+        extra = f"RateAdj1_sessions"
         self.file_addon = f'{self.nrAreas}areas_G{self.G}_S{self.S}_thetaE{self.thetaE}_beta{self.betaE}{extra}'
         self.output_dir = op.join(self.output_dir, self.file_addon)
 
@@ -167,7 +167,6 @@ class SimulationSession():
         # interpolate the trajectory values at the specified time points
         interpolated_trajectory = np.interp(time, np.linspace(start_time, end_time, len(trajectory)), trajectory)
 
-        
         return np.array(stimulation_array), interpolated_trajectory
 
 
@@ -191,11 +190,11 @@ class SimulationSession():
         # connectivity matrix for the 14 regions
         self.c_matrix = pd.read_csv(self.filename_connectivity)
         self.c_matrix.drop('Unnamed: 0', inplace=True, axis=1)
-        #self.c_matrix = np.array(self.c_matrix)
-        mean_connect = np.mean(self.c_matrix.to_numpy().flatten())
+        self.c_matrix = np.array(self.c_matrix)
+        #mean_connect = np.mean(self.c_matrix.to_numpy().flatten())
 
         # uncomment this if you want a uniform connectivity matrix
-        self.c_matrix = np.ones((self.nrAreas,self.nrAreas))*mean_connect
+        #self.c_matrix = np.ones((self.nrAreas,self.nrAreas))*mean_connect
 
         np.fill_diagonal(self.c_matrix, 0)
 
@@ -251,7 +250,7 @@ class SimulationSession():
                 dy[0][area] = -y[0][area]/self.tauE
             else:
                 dy[0][area] = (-y[0][area] + ((aux[area]-self.Edesp)*self.Eslope[area]))/self.tauE
-            
+        
         # derivative of I - rate 
         aux = self.Jie*y[0] - self.Jii*y[1] + self.thetaI + n[1] # - self.I
         for area in np.arange(self.nrAreas):

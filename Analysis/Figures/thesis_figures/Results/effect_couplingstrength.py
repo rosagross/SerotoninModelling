@@ -6,11 +6,18 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from stim_functions import figure_style
 import seaborn.objects as so
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, f_oneway
 from matplotlib.colors import rgb2hex
 from matplotlib.lines import Line2D
 import matplotlib.patheffects as PathEffects
 import matplotlib.patches as mpatches
+
+'''
+1) direct effect
+2) indrect effect visual cortex
+3) indirect effect all areas
+4) traces of selected areas
+'''
 
 # set directories
 analysed_data_dir = os.path.abspath(os.path.join(os.path.dirname(os.getcwd()), os.pardir, os.pardir, 'analysed_data'))
@@ -33,6 +40,7 @@ serotonin_df['p_down_delta'] = (serotonin_df['p_down'].values - baseline_df['p_d
 serotonin_window = [0.5,1]
 
 # %% Plot direct effect
+
 colors, dpi = figure_style()
 
 # average delta p_down 
@@ -96,6 +104,13 @@ ax1.tick_params(axis='x', which='major', pad=1.75)
 plt.savefig(os.path.join(figure_dir, f'indirect_effect_{plot_area.replace(" ", "_")}_S40.pdf'), bbox_inches="tight")
 plt.show()
 
+values = region_window_df.groupby(['G','session'],as_index=False).mean()
+f_statistic, p_value = f_oneway(values[values['G']==0]['p_down_delta'], values[values['G']==1]['p_down_delta'], 
+                                values[values['G']==2]['p_down_delta'], values[values['G']==3]['p_down_delta'])
+
+# Print the results
+print("F statistic:", f_statistic)
+print("p-value:", p_value)
 
 # %% Plot 
 
@@ -170,4 +185,41 @@ lgd = ax1.legend(title='Received projection density', handles=handles, labels=la
 plt.savefig(os.path.join(figure_dir, f'coupling_effect_S40.pdf'), bbox_inches="tight")
 plt.show()
 
-# %%
+# %% Plot traces
+
+colors, dpi = figure_style()
+f, axs = plt.subplots(1, 4, figsize=(6, 1.75), dpi=dpi, sharey=True)
+
+regions_traces = ['Visual cortex', 'Medial prefrontal cortex', 'Thalamus', 'Amygdala']
+regions_abbrev = ['VIS', 'mPFC', 'Thal', 'Amyg']
+for i, region in enumerate(regions_traces):
+   
+
+    data_df = serotonin_df[(serotonin_df['region_name'] == region)]
+    
+    sns.lineplot(data=data_df, x='time', y='p_down_delta', hue='G',
+                 color=colors['suppressed'], errorbar='se', 
+                 err_kws={'lw': 0}, ax=axs[i], palette='Dark2')
+    axs[i].plot([-1, 3], [0, 0], ls='--', color='grey')
+    axs[i].axvspan(0, 1, alpha=0.25, color='royalblue', lw=0)
+    if i == 0:
+        axs[i].set(ylabel=u'Δ down state probability (%)')
+        axs[i].plot([0, 2], [-0.49, -0.49], color='k', lw=0.5)
+        axs[i].text(1, -0.55, '2s', ha='center', va='top')
+        plt.ylim([-0.5, 0.9])
+        plt.yticks([-0.5, 0, 0.5, 0.9])
+        axs[i].set_yticklabels([-50, 0, 50, 90])
+        axs[i].get_xaxis().set_visible(False)
+        axs[i].legend(title='G', bbox_to_anchor=(0., 0.6, 1., .102), labelspacing=0.1)
+    else:
+        axs[i].legend('')
+        axs[i].axis('off')
+        axs[i].get_yaxis().set_visible(False)
+        axs[i].get_xaxis().set_visible(False)
+
+    sns.despine(trim=True, bottom=True, ax=axs[i])
+    axs[i].set_title(regions_abbrev[i])
+    plt.tight_layout(w_pad=0)
+        
+plt.savefig(os.path.join(figure_dir, f'couplingstrength_trajectories_S40.pdf'), bbox_inches="tight")
+
