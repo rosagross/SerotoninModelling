@@ -7,15 +7,16 @@ from simulation_functions import SimulationSession
 
 def main():
 
-    output_dir = os.path.join('data', 'firing_rates')
+    output_dir = os.path.join('..', '02_Data', 'firing_rates')
     settings_file = 'parameter.yml'
     filename_connectivity = 'MODEL_Cmatrix_grouped_cre-False_hemi-3_grouping-median_thresh-0.005.csv'
+    filepath_connectivity = os.path.join('..', '02_Data', 'connectivity', filename_connectivity)
     drn_connect_file = 'drn_connectivity_cre-True_hemi-3_grouping-median_thresh-0.005.csv'
     nrAreas = 14
     nr_sessions = 10 # to get some error bars we run several sessions
 
-    if not os.path.exists('./data/firing_rates/'):
-        os.mkdir('./data/firing_rates/')
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
 
     # serotonin stimulation strength 
     S_parameters =  [40, 0] 
@@ -35,7 +36,7 @@ def main():
                 print(f"Run: S={S}, G={G}, session={session}")
                 # create the simulation session 
                 S_param =  np.round(S, 1)
-                sim_session = SimulationSession(output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G_param, S_param, time_param, session)
+                sim_session = SimulationSession(output_dir, nrAreas, filepath_connectivity, settings_file, drn_connect_file, G_param, S_param, time_param, session)
                 sim_session.start_sim()
                 if plot_results:
                     sim_session.plot_results()

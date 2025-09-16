@@ -8,14 +8,14 @@ import yaml
 
 class SimulationSession():
 
-    def __init__(self, output_dir, nrAreas, filename_connectivity, settings_file, drn_connect_file, G, S, time_scale, session=''):
+    def __init__(self, output_dir, nrAreas, filepath_connectivity, settings_file, drn_connect_file, G, S, time_scale, session=''):
         # a session needs parameters and output functions 
         self.nrVars = 3 # E, I and A
         self.nrAreas = nrAreas
         self.initial_cond = np.zeros((self.nrVars, self.nrAreas))
         self.noise_init = np.zeros((2, self.nrAreas))
         self.output_dir = output_dir
-        self.filename_connectivity = filename_connectivity
+        self.filepath_connectivity = filepath_connectivity
         self.settings_file = settings_file
         self.drn_connect_file = drn_connect_file
         self.session = '_' + str(session)
@@ -188,7 +188,7 @@ class SimulationSession():
         '''
 
         # connectivity matrix for the 14 regions
-        self.c_matrix = pd.read_csv(self.filename_connectivity)
+        self.c_matrix = pd.read_csv(self.filepath_connectivity)
         self.c_matrix.drop('Unnamed: 0', inplace=True, axis=1)
         self.c_matrix = np.array(self.c_matrix)
         #mean_connect = np.mean(self.c_matrix.to_numpy().flatten())
